@@ -1,0 +1,71 @@
+name: bookmyjab
+description: "A new Flutter project."
+publish_to: 'none'
+
+version: 1.0.1+2
+
+environment:
+  sdk: '>=3.8.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  http: ^1.2.2
+  shared_preferences: ^2.2.2
+  fluttertoast: ^8.2.4
+  flutter_svg: ^2.0.0+1
+  google_fonts: ^6.2.1
+  device_preview: ^1.3.1
+  cached_network_image: ^3.2.3
+  image_picker: ^0.8.9
+  html_editor_enhanced: ^2.7.1
+  file_picker: ^10.3.10
+  geolocator: ^14.0.2
+  geocoding: ^4.0.0
+  flutter_html: ^3.0.0-beta.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+  flutter_launcher_icons: ^0.13.1
+
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/images/logo2.jpg"
+  remove_alpha_ios: true
+  min_sdk_android: 21
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/logo1.png
+    - assets/images/logo2.jpg
+    - assets/images/logo3.png
+    - assets/images/login.png
+    - assets/images/login_background.png
+    - assets/images/onboarding_1.png
+    - assets/images/onboarding_2.png
+    - assets/images/onboarding_3.png
+    - assets/images/otp.png
+    - assets/images/common.png
+    - assets/images/home_nurse.png
+    - assets/images/nurse.png
+    - assets/images/payment.png
+    - assets/images/shield_lock.svg
+    - assets/images/verified.svg
+    - assets/images/bolt.svg
+    - assets/images/splash_trans.png
+    - assets/images/google.png
+    - assets/images/profile.png
+    - assets/images/demo1.png
+    - assets/images/demo2.png
+    - assets/images/demo3.png
+    - assets/images/demo1.png
+    - assets/images/demo2.png
+    - assets/images/demo3.png
+    - assets/images/signup.png
