@@ -1,7 +1,10 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:http/http.dart' as http;
 import '../utils/colors.dart';
+import '../utils/constants.dart';
 import 'service_detail_screen.dart';
 import 'sub_services_screen.dart';
 
@@ -15,6 +18,9 @@ class ServicesScreen extends StatefulWidget {
 class _ServicesScreenState extends State<ServicesScreen> {
   final _searchController = TextEditingController();
   String _query = '';
+  String _selectedBadge = 'All';
+  List<String> _badges = ['All'];
+  bool _badgesLoading = false;
 
   static const _allServices = [
     _ServiceItem(
@@ -83,6 +89,38 @@ class _ServicesScreenState extends State<ServicesScreen> {
       statusBarColor: Colors.transparent,
       statusBarIconBrightness: Brightness.dark,
     ));
+    _fetchBadges();
+  }
+
+  Future<void> _fetchBadges() async {
+    setState(() => _badgesLoading = true);
+    try {
+      final response = await http
+          .get(Uri.parse(AppConstants.CATEGORY_LIST_API))
+          .timeout(const Duration(seconds: 8));
+      if (response.statusCode == 200) {
+        final body = jsonDecode(response.body) as Map<String, dynamic>;
+        if (body['success'] == true) {
+          final items = (body['data'] as List<dynamic>)
+              .where((e) =>
+                  e['status']?.toString().toLowerCase() == 'active')
+              .map((e) => e['category_name']?.toString() ?? '')
+              .where((n) => n.isNotEmpty)
+              .toList();
+          if (mounted) {
+            setState(() {
+              _badges = ['All', ...items];
+              _selectedBadge = 'All';
+              _badgesLoading = false;
+            });
+            return;
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('Category fetch error: $e');
+    }
+    if (mounted) setState(() => _badgesLoading = false);
   }
 
   @override
@@ -99,13 +137,15 @@ class _ServicesScreenState extends State<ServicesScreen> {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        leading: GestureDetector(
-          onTap: () => Navigator.pop(context),
-          child: const Icon(Icons.arrow_back_ios_new_rounded,
-              color: AppColors.deepPurple, size: 20),
-        ),
+        leading: Navigator.canPop(context)
+            ? GestureDetector(
+                onTap: () => Navigator.pop(context),
+                child: const Icon(Icons.arrow_back_ios_new_rounded,
+                    color: AppColors.deepPurple, size: 20),
+              )
+            : const SizedBox.shrink(),
         title: Text(
-          'All Services',
+          'Vaccines & Care',
           style: GoogleFonts.poppins(
               fontSize: 18,
               fontWeight: FontWeight.w600,
@@ -164,6 +204,79 @@ class _ServicesScreenState extends State<ServicesScreen> {
                     ),
                 ],
               ),
+            ),
+          ),
+
+          // ── Filter badges ───────────────────────────────────────
+          Container(
+            color: Colors.white,
+            padding: const EdgeInsets.only(bottom: 12),
+            child: SizedBox(
+              height: 36,
+              child: _badgesLoading
+                  ? ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      itemCount: 4,
+                      itemBuilder: (_, __) => Container(
+                        width: 72,
+                        margin: const EdgeInsets.only(right: 8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFEEEEEE),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                      ),
+                    )
+                  : ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      itemCount: _badges.length,
+                      separatorBuilder: (_, __) => const SizedBox(width: 8),
+                      itemBuilder: (_, i) {
+                        final badge = _badges[i];
+                        final selected = _selectedBadge == badge;
+                        return GestureDetector(
+                          onTap: () =>
+                              setState(() => _selectedBadge = badge),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: selected
+                                  ? AppColors.purple
+                                  : Colors.white,
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: selected
+                                    ? AppColors.purple
+                                    : const Color(0xFFDDDDDD),
+                              ),
+                              boxShadow: selected
+                                  ? [
+                                      BoxShadow(
+                                        color: AppColors.purple
+                                            .withOpacity(0.25),
+                                        blurRadius: 8,
+                                        offset: const Offset(0, 2),
+                                      )
+                                    ]
+                                  : [],
+                            ),
+                            child: Text(
+                              badge,
+                              style: GoogleFonts.poppins(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                                color: selected
+                                    ? Colors.white
+                                    : AppColors.greyText,
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
             ),
           ),
 

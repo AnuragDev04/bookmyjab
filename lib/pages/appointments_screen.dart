@@ -152,16 +152,22 @@ class _AppointmentsScreenState extends State<AppointmentsScreen>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('My Appointments',
-                      style: GoogleFonts.poppins(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.deepPurple)),
+                  Text(
+                    'My Appointments',
+                    style: GoogleFonts.poppins(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.deepPurple,
+                    ),
+                  ),
                   const SizedBox(height: 4),
-                  Text('Track and manage your bookings',
-                      style: GoogleFonts.poppins(
-                          fontSize: 12,
-                          color: AppColors.greyText)),
+                  Text(
+                    'Track and manage your bookings',
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      color: AppColors.greyText,
+                    ),
+                  ),
                   const SizedBox(height: 16),
 
                   // ── Pill Tab Bar ──────────────────────────────
@@ -190,16 +196,20 @@ class _AppointmentsScreenState extends State<AppointmentsScreen>
                       dividerColor: Colors.transparent,
                       labelPadding: EdgeInsets.zero,
                       labelStyle: GoogleFonts.poppins(
-                          fontSize: 12, fontWeight: FontWeight.w600),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
                       unselectedLabelStyle: GoogleFonts.poppins(
-                          fontSize: 12, fontWeight: FontWeight.w500),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
                       labelColor: Colors.white,
                       unselectedLabelColor: AppColors.greyText,
                       tabs: List.generate(_tabs.length, (i) {
                         final count = [
                           _upcoming.length,
                           _completed.length,
-                          _cancelled.length
+                          _cancelled.length,
                         ][i];
                         return Tab(
                           child: Row(
@@ -209,7 +219,9 @@ class _AppointmentsScreenState extends State<AppointmentsScreen>
                               const SizedBox(width: 5),
                               Container(
                                 padding: const EdgeInsets.symmetric(
-                                    horizontal: 6, vertical: 1),
+                                  horizontal: 6,
+                                  vertical: 1,
+                                ),
                                 decoration: BoxDecoration(
                                   color: _activeTab == i
                                       ? Colors.white.withOpacity(0.25)
@@ -261,6 +273,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen>
 // ─────────────────────────────────────────────────────────────────────────────
 class _AppointmentList extends StatelessWidget {
   final List<_AppointmentData> appointments;
+
   const _AppointmentList({required this.appointments});
 
   @override
@@ -277,19 +290,29 @@ class _AppointmentList extends StatelessWidget {
                 color: AppColors.purple.withOpacity(0.07),
                 shape: BoxShape.circle,
               ),
-              child: Icon(Icons.calendar_today_rounded,
-                  size: 36, color: AppColors.purple.withOpacity(0.4)),
+              child: Icon(
+                Icons.calendar_today_rounded,
+                size: 36,
+                color: AppColors.purple.withOpacity(0.4),
+              ),
             ),
             const SizedBox(height: 16),
-            Text('No appointments here',
-                style: GoogleFonts.poppins(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.deepPurple)),
+            Text(
+              'No appointments here',
+              style: GoogleFonts.poppins(
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+                color: AppColors.deepPurple,
+              ),
+            ),
             const SizedBox(height: 4),
-            Text('Your bookings will appear here',
-                style: GoogleFonts.poppins(
-                    fontSize: 12, color: AppColors.greyText)),
+            Text(
+              'Your bookings will appear here',
+              style: GoogleFonts.poppins(
+                fontSize: 12,
+                color: AppColors.greyText,
+              ),
+            ),
           ],
         ),
       );
@@ -308,6 +331,7 @@ class _AppointmentList extends StatelessWidget {
 // ─────────────────────────────────────────────────────────────────────────────
 class _AppointmentCard extends StatelessWidget {
   final _AppointmentData data;
+
   const _AppointmentCard({required this.data});
 
   @override
@@ -331,9 +355,10 @@ class _AppointmentCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(18),
           boxShadow: [
             BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 12,
-                offset: const Offset(0, 3))
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 12,
+              offset: const Offset(0, 3),
+            ),
           ],
         ),
         child: Column(
@@ -352,8 +377,7 @@ class _AppointmentCard extends StatelessWidget {
                       color: AppColors.purple.withOpacity(0.10),
                       borderRadius: BorderRadius.circular(14),
                     ),
-                    child: Icon(data.icon,
-                        color: AppColors.purple, size: 24),
+                    child: Icon(data.icon, color: AppColors.purple, size: 24),
                   ),
                   const SizedBox(width: 12),
 
@@ -362,29 +386,50 @@ class _AppointmentCard extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(data.service,
-                            style: GoogleFonts.poppins(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.deepPurple)),
+                        Text(
+                          data.service,
+                          style: GoogleFonts.poppins(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.deepPurple,
+                          ),
+                        ),
                         const SizedBox(height: 4),
                         Row(
                           children: [
-                            const Icon(Icons.calendar_today_rounded,
-                                size: 12, color: AppColors.greyText),
+                            const Icon(
+                              Icons.calendar_today_rounded,
+                              size: 12,
+                              color: AppColors.greyText,
+                            ),
                             const SizedBox(width: 4),
-                            Text(data.date,
+                            Flexible(
+                              child: Text(
+                                data.date,
+                                overflow: TextOverflow.ellipsis,
                                 style: GoogleFonts.poppins(
-                                    fontSize: 11,
-                                    color: AppColors.greyText)),
-                            const SizedBox(width: 8),
-                            const Icon(Icons.access_time_rounded,
-                                size: 12, color: AppColors.greyText),
+                                  fontSize: 11,
+                                  color: AppColors.greyText,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            const Icon(
+                              Icons.access_time_rounded,
+                              size: 12,
+                              color: AppColors.greyText,
+                            ),
                             const SizedBox(width: 4),
-                            Text(data.time,
+                            Flexible(
+                              child: Text(
+                                data.time,
+                                overflow: TextOverflow.ellipsis,
                                 style: GoogleFonts.poppins(
-                                    fontSize: 11,
-                                    color: AppColors.greyText)),
+                                  fontSize: 11,
+                                  color: AppColors.greyText,
+                                ),
+                              ),
+                            ),
                           ],
                         ),
                       ],
@@ -392,26 +437,38 @@ class _AppointmentCard extends StatelessWidget {
                   ),
 
                   // Status badge
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: data.statusBg,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(data.status,
+                  Flexible(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: data.statusBg,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        data.status,
+                        overflow: TextOverflow.ellipsis,
                         style: GoogleFonts.poppins(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: data.statusColor)),
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: data.statusColor,
+                        ),
+                      ),
+                    ),
                   ),
                 ],
               ),
             ),
 
             // ── Divider ─────────────────────────────────────────
-            const Divider(height: 1, indent: 14, endIndent: 14,
-                color: Color(0xFFF0F0F0)),
+            const Divider(
+              height: 1,
+              indent: 14,
+              endIndent: 14,
+              color: Color(0xFFF0F0F0),
+            ),
 
             // ── Bottom row: nurse + price + arrow ────────────────
             Padding(
@@ -426,42 +483,86 @@ class _AppointmentCard extends StatelessWidget {
                       shape: BoxShape.circle,
                       color: AppColors.purple.withOpacity(0.10),
                       border: Border.all(
-                          color: AppColors.purple.withOpacity(0.2),
-                          width: 1.5),
+                        color: AppColors.purple.withOpacity(0.2),
+                        width: 1.5,
+                      ),
                     ),
                     child: ClipOval(
                       child: Image.asset(
                         'assets/images/nurse.png',
                         fit: BoxFit.cover,
                         errorBuilder: (_, __, ___) => const Icon(
-                            Icons.person_rounded,
-                            size: 16,
-                            color: AppColors.purple),
+                          Icons.person_rounded,
+                          size: 16,
+                          color: AppColors.purple,
+                        ),
                       ),
                     ),
                   ),
                   const SizedBox(width: 8),
                   Expanded(
-                    child: Text(data.nurse,
-                        style: GoogleFonts.poppins(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                            color: AppColors.greyText)),
+                    child: Text(
+                      data.nurse,
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.greyText,
+                      ),
+                    ),
                   ),
 
                   // Price
                   Container(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 4),
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: AppColors.orange.withOpacity(0.10),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: Text(data.price,
-                        style: GoogleFonts.poppins(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.orange)),
+                    child: Text(
+                      data.price,
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.orange,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+
+                  // Download invoice
+                  GestureDetector(
+                    onTap: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            'Downloading invoice...',
+                            style: GoogleFonts.poppins(fontSize: 13),
+                          ),
+                          backgroundColor: AppColors.purple,
+                          behavior: SnackBarBehavior.floating,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          duration: const Duration(seconds: 2),
+                        ),
+                      );
+                    },
+                    child: Container(
+                      width: 28,
+                      height: 28,
+                      decoration: BoxDecoration(
+                        color: AppColors.purple.withOpacity(0.08),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.download_rounded,
+                        color: AppColors.purple,
+                        size: 15,
+                      ),
+                    ),
                   ),
                   const SizedBox(width: 8),
 
@@ -473,8 +574,11 @@ class _AppointmentCard extends StatelessWidget {
                       color: AppColors.purple.withOpacity(0.08),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.arrow_forward_rounded,
-                        color: AppColors.purple, size: 14),
+                    child: const Icon(
+                      Icons.arrow_forward_rounded,
+                      color: AppColors.purple,
+                      size: 14,
+                    ),
                   ),
                 ],
               ),

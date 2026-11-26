@@ -1,13 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../utils/colors.dart';
+import 'nurse_detail_screen.dart';
 
-class AppointmentDetailScreen extends StatefulWidget {
+class AppointmentDetailScreen extends StatelessWidget {
   final String serviceName;
   final String selectedDate;
   final String selectedTime;
   final String address;
   final String bookingId;
+  final String nurseName;
+  final String nurseRole;
+  final String nurseRating;
+  final String nurseReviews;
+  final String nurseExperience;
 
   const AppointmentDetailScreen({
     super.key,
@@ -16,913 +22,723 @@ class AppointmentDetailScreen extends StatefulWidget {
     required this.selectedTime,
     required this.address,
     required this.bookingId,
+    this.nurseName = 'Priya Sharma',
+    this.nurseRole = 'Home Nurse',
+    this.nurseRating = '4.8',
+    this.nurseReviews = '124',
+    this.nurseExperience = '5 yrs',
   });
 
-  @override
-  State<AppointmentDetailScreen> createState() =>
-      _AppointmentDetailScreenState();
-}
+  // Generate a short ref like #4E2EA932 from bookingId
+  String get _ref =>
+      bookingId.startsWith('#') ? bookingId : '#${bookingId.toUpperCase()}';
 
-class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
+  // Formatted date string
+  String get _dateStr => selectedDate.isNotEmpty ? selectedDate : '08-08-2026';
+
+  String get _consentTimestamp {
+    final now = DateTime.now();
+    final months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    final h = now.hour > 12 ? now.hour - 12 : (now.hour == 0 ? 12 : now.hour);
+    final ampm = now.hour >= 12 ? 'pm' : 'am';
+    final min = now.minute.toString().padLeft(2, '0');
+    return '${now.day} ${months[now.month - 1]} ${now.year}, $h:$min $ampm';
+  }
 
   @override
   Widget build(BuildContext context) {
+    // Charge calculations
+    const double vaccineCharge = 268;
+    const double adminCharge = 499;
+    const double total = vaccineCharge + adminCharge;
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5FA),
+      backgroundColor: Colors.white,
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
         leading: GestureDetector(
           onTap: () => Navigator.pop(context),
-          child: const Icon(Icons.arrow_back_ios_new_rounded,
-              color: AppColors.deepPurple, size: 20),
-        ),
-        title: Text('Appointment Details',
-            style: GoogleFonts.poppins(
-                fontSize: 17,
-                fontWeight: FontWeight.w600,
-                color: AppColors.deepPurple)),
-        centerTitle: true,
-        actions: [
-          GestureDetector(
-            onTap: () {},
-            child: Container(
-              margin: const EdgeInsets.only(right: 14),
-              child: const Icon(Icons.share_outlined,
-                  color: AppColors.deepPurple, size: 20),
-            ),
+          child: const Icon(
+            Icons.arrow_back_ios_new_rounded,
+            color: AppColors.deepPurple,
+            size: 20,
           ),
-        ],
+        ),
+        title: Text(
+          'Booking Details',
+          style: GoogleFonts.poppins(
+            fontSize: 17,
+            fontWeight: FontWeight.w600,
+            color: AppColors.deepPurple,
+          ),
+        ),
+        centerTitle: true,
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(1),
           child: Container(height: 1, color: const Color(0xFFF0F0F0)),
         ),
       ),
-      body: Column(
-        children: [
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-
-                  // ── Booking Hero Card ──────────────────────────────
-                  _BookingHeroCard(
-                    serviceName: widget.serviceName,
-                    date: widget.selectedDate,
-                    time: widget.selectedTime,
-                    bookingId: widget.bookingId,
+      bottomNavigationBar: Container(
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          border: Border(top: BorderSide(color: Color(0xFFF0F0F0))),
+        ),
+        child: Row(
+          children: [
+            // ── Reschedule ──────────────────────────────────────────
+            Expanded(
+              child: OutlinedButton(
+                onPressed: () {
+                  // TODO: navigate to reschedule flow
+                },
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.purple,
+                  side: const BorderSide(color: AppColors.purple, width: 1.5),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
                   ),
-                  const SizedBox(height: 16),
-
-                  // ── Live Tracking ──────────────────────────────────
-                  _LiveTrackingCard(),
-                  const SizedBox(height: 16),
-
-                  // ── Nurse Card ─────────────────────────────────────
-                  _NurseCard(),
-                  const SizedBox(height: 16),
-
-                  // ── Address Card ───────────────────────────────────
-                  _AddressCard(address: widget.address),
-                  const SizedBox(height: 16),
-
-                  // ── Price Summary ──────────────────────────────────
-                  _PriceSummaryCard(),
-                  const SizedBox(height: 100),
-                ],
+                ),
+                child: Text(
+                  'Reschedule',
+                  style: GoogleFonts.poppins(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ),
             ),
-          ),
-
-          // ── Bottom buttons ─────────────────────────────────────────
-          _BottomActions(
-            onReschedule: () {},
-            onCancel: () => _showCancelDialog(),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showCancelDialog() {
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(18)),
-        title: Text('Cancel Appointment',
-            style: GoogleFonts.poppins(
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-                color: AppColors.deepPurple)),
-        content: Text(
-            'Are you sure you want to cancel this appointment?',
-            style: GoogleFonts.poppins(
-                fontSize: 13, color: AppColors.greyText, height: 1.5)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('No',
-                style: GoogleFonts.poppins(
+            const SizedBox(width: 12),
+            // ── Cancel Booking ──────────────────────────────────────
+            Expanded(
+              child: ElevatedButton(
+                onPressed: () {
+                  // TODO: show cancel confirmation dialog
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.red,
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                child: Text(
+                  'Cancel Booking',
+                  style: GoogleFonts.poppins(
+                    fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: AppColors.greyText)),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              Navigator.pop(context);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.red,
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10)),
+                  ),
+                ),
+              ),
             ),
-            child: Text('Yes, Cancel',
-                style: GoogleFonts.poppins(
-                    fontWeight: FontWeight.w600, color: Colors.white)),
-          ),
-        ],
+          ],
+        ),
       ),
+      body:
+          // ── Scrollable body ────────────────────────────────────────
+          SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 40),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // ── Section label ─────────────────────────────────
+                Text(
+                  'BOOKING & CONSENT',
+                  style: GoogleFonts.poppins(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.orange,
+                    letterSpacing: 1.0,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Bookmyjab Booking & Consent\nSummary',
+                  style: GoogleFonts.poppins(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.deepPurple,
+                    height: 1.25,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Reference $_ref',
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    color: AppColors.greyText,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  _dateStr,
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    color: AppColors.greyText,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                const Divider(color: Color(0xFFEEEEEE)),
+                const SizedBox(height: 20),
+
+                // ── ASSIGNED NURSE ────────────────────────────────
+                Text(
+                  'ASSIGNED NURSE',
+                  style: GoogleFonts.poppins(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.purple,
+                    letterSpacing: 1.0,
+                  ),
+                ),
+                const SizedBox(height: 12),
+
+                GestureDetector(
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => NurseDetailScreen(
+                        name: nurseName,
+                        role: nurseRole,
+                        rating: nurseRating,
+                        reviews: nurseReviews,
+                        experience: nurseExperience,
+                        distance: '2.4 km',
+                      ),
+                    ),
+                  ),
+                  child: Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: const Color(0xFFEEEEEE)),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.purple.withOpacity(0.06),
+                          blurRadius: 10,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        // Avatar
+                        Container(
+                          width: 56,
+                          height: 56,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: AppColors.purple.withOpacity(0.10),
+                            border: Border.all(
+                                color: AppColors.purple.withOpacity(0.2),
+                                width: 2),
+                          ),
+                          child: ClipOval(
+                            child: Image.asset(
+                              'assets/images/nurse.png',
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => const Icon(
+                                  Icons.person_rounded,
+                                  size: 28,
+                                  color: AppColors.purple),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 14),
+
+                        // Name + role + stats
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                nurseName,
+                                style: GoogleFonts.poppins(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.deepPurple),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                nurseRole,
+                                style: GoogleFonts.poppins(
+                                    fontSize: 12,
+                                    color: AppColors.greyText),
+                              ),
+                              const SizedBox(height: 8),
+                              Row(
+                                children: [
+                                  // Rating
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 7, vertical: 3),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFFFF8E1),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        const Icon(Icons.star_rounded,
+                                            size: 13,
+                                            color: Color(0xFFFFA000)),
+                                        const SizedBox(width: 3),
+                                        Text(
+                                          '$nurseRating ($nurseReviews)',
+                                          style: GoogleFonts.poppins(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w600,
+                                              color: Color(0xFFFFA000)),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  // Experience
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 7, vertical: 3),
+                                    decoration: BoxDecoration(
+                                      color:
+                                          AppColors.purple.withOpacity(0.08),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(Icons.work_outline_rounded,
+                                            size: 12,
+                                            color: AppColors.purple),
+                                        const SizedBox(width: 3),
+                                        Text(
+                                          nurseExperience,
+                                          style: GoogleFonts.poppins(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w600,
+                                              color: AppColors.purple),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        // View profile arrow
+                        Container(
+                          width: 32,
+                          height: 32,
+                          decoration: BoxDecoration(
+                            color: AppColors.purple.withOpacity(0.08),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.arrow_forward_rounded,
+                              color: AppColors.purple, size: 16),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                // ── BOOKING REQUEST ───────────────────────────────
+                Text(
+                  'BOOKING REQUEST',
+                  style: GoogleFonts.poppins(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.purple,
+                    letterSpacing: 1.0,
+                  ),
+                ),
+                const SizedBox(height: 12),
+
+                // Details table card
+                Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFEEEEEE)),
+                  ),
+                  child: Column(
+                    children: [
+                      _TableRow(
+                        label: 'Patient',
+                        value: 'Test',
+                        valueBold: true,
+                      ),
+                      _TableRow(
+                        label: 'Vaccine',
+                        value: serviceName.isNotEmpty ? serviceName : 'OPV',
+                        valueBold: true,
+                      ),
+                      _TableRow(
+                        label: 'Date',
+                        value: _dateStr,
+                        valueBold: true,
+                      ),
+                      _TableRow(
+                        label: 'Slot',
+                        value: selectedTime.isNotEmpty
+                            ? selectedTime
+                            : '4:00 PM – 5:00 PM',
+                        valueBold: true,
+                      ),
+                      _TableRow(
+                        label: 'Address',
+                        value: address.isNotEmpty
+                            ? '$address\nContact: Test (+91 9325996893)'
+                            : 'Dvv, Dgh, Fg, Cvn, Landmark: Tg,\nContact: Test (+91 9325996893)',
+                        valueBold: true,
+                      ),
+                      _TableRow(
+                        label: 'Payment mode',
+                        value: 'Cash on Delivery',
+                        valueBold: true,
+                        isLast: true,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Cash note card
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFF8F2),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border(
+                      left: BorderSide(color: AppColors.orange, width: 4),
+                    ),
+                  ),
+                  child: Text(
+                    'to be collected in cash at the time of vaccination.\n'
+                    'Booking Ref $_ref.',
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      color: AppColors.greyText,
+                      height: 1.6,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 28),
+
+                // ── CHARGE SUMMARY ────────────────────────────────
+                Text(
+                  'CHARGE SUMMARY',
+                  style: GoogleFonts.poppins(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.purple,
+                    letterSpacing: 1.0,
+                  ),
+                ),
+                const SizedBox(height: 12),
+
+                Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFEEEEEE)),
+                  ),
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Vaccine line
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            '${serviceName.isNotEmpty ? serviceName : 'OPV'} · Test',
+                            style: GoogleFonts.poppins(
+                              fontSize: 13,
+                              color: AppColors.deepPurple,
+                            ),
+                          ),
+                          Text(
+                            '₹${vaccineCharge.toStringAsFixed(0)}',
+                            style: GoogleFonts.poppins(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.deepPurple,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+
+                      // Admin charge line
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Home administration & coordination',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 13,
+                                  color: AppColors.deepPurple,
+                                ),
+                              ),
+                              Text(
+                                '₹${adminCharge.toStringAsFixed(0)} × 1 injection',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 11,
+                                  color: AppColors.greyText,
+                                ),
+                              ),
+                            ],
+                          ),
+                          Text(
+                            '₹${adminCharge.toStringAsFixed(0)}',
+                            style: GoogleFonts.poppins(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.deepPurple,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 12),
+                        child: Divider(height: 1, color: Color(0xFFEEEEEE)),
+                      ),
+
+                      // Estimated total
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Estimated total',
+                            style: GoogleFonts.poppins(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.deepPurple,
+                            ),
+                          ),
+                          Text(
+                            '₹${total.toStringAsFixed(0)}',
+                            style: GoogleFonts.poppins(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.deepPurple,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        'Final amount will be confirmed against the pharmacy '
+                        'invoice on the day of the appointment.',
+                        style: GoogleFonts.poppins(
+                          fontSize: 11,
+                          color: AppColors.greyText,
+                          height: 1.5,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 28),
+
+                // ── ACCEPTED CONSENT ──────────────────────────────
+                Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFEEEEEE)),
+                  ),
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'ACCEPTED CONSENT',
+                        style: GoogleFonts.poppins(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.orange,
+                          letterSpacing: 1.0,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'Accepted on $_consentTimestamp',
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          color: AppColors.greyText,
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+
+                      // Bullet list
+                      ...[
+                        'Terms & Conditions, Privacy, Refund, Medical Declaration and Vaccination Consent',
+                        'Medical Declaration',
+                        'Vaccination Consent',
+                        'Procurement Authorisation',
+                        'Data & Privacy',
+                        'Emergency & Limitation',
+                      ].map(
+                        (item) => Padding(
+                          padding: const EdgeInsets.only(bottom: 6),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.only(
+                                  top: 5,
+                                  right: 8,
+                                ),
+                                child: Container(
+                                  width: 5,
+                                  height: 5,
+                                  decoration: const BoxDecoration(
+                                    color: AppColors.deepPurple,
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                              ),
+                              Expanded(
+                                child: Text(
+                                  item,
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 13,
+                                    color: AppColors.deepPurple,
+                                    height: 1.5,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 14),
+                      const Divider(height: 1, color: Color(0xFFEEEEEE)),
+                      const SizedBox(height: 14),
+
+                      // Legal versions
+                      Text(
+                        'LEGAL VERSIONS',
+                        style: GoogleFonts.poppins(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.purple,
+                          letterSpacing: 1.0,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      ...[
+                        'BMJ-CONSENT-V1.0-2026-05',
+                        'terms:BMJ-TERMS-V1.0-2026-05',
+                        'privacy:BMJ-PRIVACY-V1.0-2026-05',
+                        'refund:BMJ-REFUND-V1.0-2026-05',
+                        'vaccine_consent:BMJ-VACCINE-CONSENT-V1.0-2026-05',
+                        'medical_declaration:BMJ-MEDICAL-DECLARATION-V1.0-2026-05',
+                        'procurement_auth:BMJ-PROCUREMENT-AUTH-V1.0-2026-05',
+                        'emergency_limitation:BMJ-EMERGENCY-LIMITATION-V1.0-2026-05',
+                      ].map(
+                        (v) => Padding(
+                          padding: const EdgeInsets.only(bottom: 3),
+                          child: Text(
+                            v,
+                            style: GoogleFonts.robotoMono(
+                              fontSize: 10,
+                              color: AppColors.greyText,
+                              height: 1.5,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
+              ],
+            ),
+          ),
     );
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Booking Hero Card
-// ─────────────────────────────────────────────────────────────────────────────
-class _BookingHeroCard extends StatelessWidget {
-  final String serviceName;
-  final String date;
-  final String time;
-  final String bookingId;
+// ── Table row ─────────────────────────────────────────────────────────────────
+class _TableRow extends StatelessWidget {
+  final String label;
+  final String value;
+  final bool valueBold;
+  final bool isLast;
 
-  const _BookingHeroCard({
-    required this.serviceName,
-    required this.date,
-    required this.time,
-    required this.bookingId,
+  const _TableRow({
+    required this.label,
+    required this.value,
+    this.valueBold = false,
+    this.isLast = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF3E1A6E), Color(0xFF7B4EBF)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.purple.withOpacity(0.35),
-            blurRadius: 18,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Stack(
-        children: [
-          // Decorative circles
-          Positioned(
-            right: -24,
-            top: -24,
-            child: Container(
-              width: 120,
-              height: 120,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white.withOpacity(0.05),
-              ),
-            ),
-          ),
-          Positioned(
-            right: 30,
-            bottom: -30,
-            child: Container(
-              width: 90,
-              height: 90,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white.withOpacity(0.05),
-              ),
-            ),
-          ),
-
-          Padding(
-            padding: const EdgeInsets.all(18),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Service name + status row
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Service icon
-                    Container(
-                      width: 46,
-                      height: 46,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.15),
-                        borderRadius: BorderRadius.circular(13),
-                      ),
-                      child: const Icon(Icons.medical_services_outlined,
-                          color: Colors.white, size: 24),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(serviceName,
-                              style: GoogleFonts.poppins(
-                                  fontSize: 17,
-                                  fontWeight: FontWeight.w700,
-                                  color: Colors.white)),
-                          const SizedBox(height: 2),
-                          Text('Home Healthcare Service',
-                              style: GoogleFonts.poppins(
-                                  fontSize: 11,
-                                  color: Colors.white.withOpacity(0.75))),
-                        ],
-                      ),
-                    ),
-                    // Status badge
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 5),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF4CAF50).withOpacity(0.22),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                            color: const Color(0xFF4CAF50), width: 1),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.check_circle_outline_rounded,
-                              color: Color(0xFF81C784), size: 12),
-                          const SizedBox(width: 4),
-                          Text('Confirmed',
-                              style: GoogleFonts.poppins(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w600,
-                                  color: const Color(0xFF81C784))),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-
-                // Divider
-                Container(
-                    height: 1, color: Colors.white.withOpacity(0.15)),
-                const SizedBox(height: 14),
-
-                // Date / Time / Booking ID row
-                Row(
-                  children: [
-                    _HeroInfoItem(
-                        icon: Icons.calendar_today_rounded,
-                        label: 'Date',
-                        value: date),
-                    Container(
-                        width: 1,
-                        height: 32,
-                        color: Colors.white.withOpacity(0.2)),
-                    _HeroInfoItem(
-                        icon: Icons.access_time_rounded,
-                        label: 'Time',
-                        value: time),
-                    Container(
-                        width: 1,
-                        height: 32,
-                        color: Colors.white.withOpacity(0.2)),
-                    _HeroInfoItem(
-                        icon: Icons.tag_rounded,
-                        label: 'Booking ID',
-                        value: bookingId.length > 12
-                            ? bookingId.substring(0, 12) + '…'
-                            : bookingId),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _HeroInfoItem extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final String value;
-  const _HeroInfoItem(
-      {required this.icon, required this.label, required this.value});
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10),
-        child: Column(
-          children: [
-            Icon(icon, color: Colors.white.withOpacity(0.7), size: 14),
-            const SizedBox(height: 3),
-            Text(label,
-                style: GoogleFonts.poppins(
-                    fontSize: 9,
-                    color: Colors.white.withOpacity(0.6))),
-            const SizedBox(height: 2),
-            Text(value,
-                textAlign: TextAlign.center,
-                style: GoogleFonts.poppins(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white)),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Live Tracking Card
-// ─────────────────────────────────────────────────────────────────────────────
-class _LiveTrackingCard extends StatelessWidget {
-  static const _steps = [
-    _TrackStep('Booked',      Icons.check_circle_rounded,       true,  true),
-    _TrackStep('Confirmed',   Icons.verified_rounded,           true,  true),
-    _TrackStep('On the Way',  Icons.directions_bike_rounded,    true,  false),
-    _TrackStep('Arrived',     Icons.home_rounded,               false, false),
-    _TrackStep('Completed',   Icons.task_alt_rounded,           false, false),
-  ];
-
-  const _LiveTrackingCard();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        boxShadow: [
-          BoxShadow(
-              color: Colors.black.withOpacity(0.04),
-              blurRadius: 12,
-              offset: const Offset(0, 3))
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Title row
-          Row(
-            children: [
-              Container(
-                width: 8,
-                height: 8,
-                decoration: const BoxDecoration(
-                  color: Color(0xFF4CAF50),
-                  shape: BoxShape.circle,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Text('Live Tracking',
-                  style: GoogleFonts.poppins(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.deepPurple)),
-              const Spacer(),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF4CAF50).withOpacity(0.10),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text('ETA: 15 mins',
-                    style: GoogleFonts.poppins(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: const Color(0xFF2E7D32))),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-
-          // Step tracker
-          Row(
-            children: List.generate(_steps.length * 2 - 1, (i) {
-              if (i.isOdd) {
-                // Connector line
-                final prev = _steps[i ~/ 2];
-                final next = _steps[i ~/ 2 + 1];
-                final filled = prev.done && next.done;
-                final halfFilled = prev.done && !next.done;
-                return Expanded(
-                  child: Stack(
-                    children: [
-                      Container(
-                          height: 3,
-                          color: const Color(0xFFE0E0E0)),
-                      if (filled)
-                        Container(
-                            height: 3,
-                            color: AppColors.purple),
-                      if (halfFilled)
-                        FractionallySizedBox(
-                          widthFactor: 0.5,
-                          child: Container(
-                              height: 3,
-                              color: AppColors.purple),
-                        ),
-                    ],
-                  ),
-                );
-              }
-              final step = _steps[i ~/ 2];
-              return _TrackStepDot(step: step);
-            }),
-          ),
-          const SizedBox(height: 10),
-
-          // Labels row
-          Row(
-            children: List.generate(_steps.length * 2 - 1, (i) {
-              if (i.isOdd) return const Expanded(child: SizedBox());
-              final step = _steps[i ~/ 2];
-              return SizedBox(
-                width: 52,
-                child: Text(step.label,
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.poppins(
-                        fontSize: 9,
-                        fontWeight: step.active
-                            ? FontWeight.w600
-                            : FontWeight.w400,
-                        color: step.active
-                            ? AppColors.purple
-                            : AppColors.greyText)),
-              );
-            }),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _TrackStep {
-  final String label;
-  final IconData icon;
-  final bool done;
-  final bool active;
-  const _TrackStep(this.label, this.icon, this.done, this.active);
-}
-
-class _TrackStepDot extends StatelessWidget {
-  final _TrackStep step;
-  const _TrackStepDot({required this.step});
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 52,
-      child: Center(
-        child: Container(
-          width: step.active ? 38 : 32,
-          height: step.active ? 38 : 32,
-          decoration: BoxDecoration(
-            color: step.done
-                ? AppColors.purple
-                : const Color(0xFFEEEEEE),
-            shape: BoxShape.circle,
-            border: step.active
-                ? Border.all(
-                    color: AppColors.purple.withOpacity(0.3), width: 3)
-                : null,
-            boxShadow: step.active
-                ? [
-                    BoxShadow(
-                        color: AppColors.purple.withOpacity(0.3),
-                        blurRadius: 10,
-                        offset: const Offset(0, 3))
-                  ]
-                : [],
-          ),
-          child: Icon(step.icon,
-              size: step.active ? 18 : 15,
-              color: step.done ? Colors.white : AppColors.greyText),
-        ),
-      ),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Nurse Card
-// ─────────────────────────────────────────────────────────────────────────────
-class _NurseCard extends StatelessWidget {
-  const _NurseCard();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        boxShadow: [
-          BoxShadow(
-              color: Colors.black.withOpacity(0.04),
-              blurRadius: 12,
-              offset: const Offset(0, 3))
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Assigned Nurse',
-              style: GoogleFonts.poppins(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                  color: AppColors.greyText)),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              // Avatar
-              Stack(
-                children: [
-                  Container(
-                    width: 58,
-                    height: 58,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: AppColors.purple.withOpacity(0.10),
-                      border: Border.all(
-                          color: AppColors.purple.withOpacity(0.25),
-                          width: 2),
-                    ),
-                    child: ClipOval(
-                      child: Image.asset(
-                        'assets/images/nurse.png',
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => const Icon(
-                            Icons.person_rounded,
-                            color: AppColors.purple,
-                            size: 30),
-                      ),
-                    ),
-                  ),
-                  // Online dot
-                  Positioned(
-                    bottom: 2,
-                    right: 2,
-                    child: Container(
-                      width: 12,
-                      height: 12,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF4CAF50),
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 2),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(width: 14),
-
-              // Info
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Priya Sharma',
-                        style: GoogleFonts.poppins(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.deepPurple)),
-                    const SizedBox(height: 2),
-                    Text('Staff Nurse · 5 Years Exp.',
-                        style: GoogleFonts.poppins(
-                            fontSize: 12,
-                            color: AppColors.greyText)),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        const Icon(Icons.star_rounded,
-                            color: Color(0xFFFFC107), size: 14),
-                        const SizedBox(width: 3),
-                        Text('4.8',
-                            style: GoogleFonts.poppins(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.deepPurple)),
-                        Text(' (120 reviews)',
-                            style: GoogleFonts.poppins(
-                                fontSize: 11,
-                                color: AppColors.greyText)),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-
-              // Actions
-              Column(
-                children: [
-                  _RoundBtn(
-                      icon: Icons.call_rounded,
-                      color: AppColors.purple,
-                      onTap: () {}),
-                  const SizedBox(height: 8),
-                  _RoundBtn(
-                      icon: Icons.chat_bubble_outline_rounded,
-                      color: AppColors.orange,
-                      onTap: () {}),
-                ],
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Address Card
-// ─────────────────────────────────────────────────────────────────────────────
-class _AddressCard extends StatelessWidget {
-  final String address;
-  const _AddressCard({required this.address});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        boxShadow: [
-          BoxShadow(
-              color: Colors.black.withOpacity(0.04),
-              blurRadius: 12,
-              offset: const Offset(0, 3))
-        ],
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: AppColors.orange.withOpacity(0.10),
-              borderRadius: BorderRadius.circular(11),
-            ),
-            child: const Icon(Icons.location_on_rounded,
-                color: AppColors.orange, size: 20),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Service Address',
-                    style: GoogleFonts.poppins(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.deepPurple)),
-                const SizedBox(height: 3),
-                Text(address,
-                    style: GoogleFonts.poppins(
-                        fontSize: 12,
-                        color: AppColors.greyText,
-                        height: 1.5)),
-              ],
-            ),
-          ),
-          GestureDetector(
-            onTap: () {},
-            child: Container(
-              padding: const EdgeInsets.symmetric(
-                  horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                color: AppColors.purple.withOpacity(0.08),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text('Map',
-                  style: GoogleFonts.poppins(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.purple)),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Price Summary Card
-// ─────────────────────────────────────────────────────────────────────────────
-class _PriceSummaryCard extends StatelessWidget {
-  const _PriceSummaryCard();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        boxShadow: [
-          BoxShadow(
-              color: Colors.black.withOpacity(0.04),
-              blurRadius: 12,
-              offset: const Offset(0, 3))
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Price Summary',
-              style: GoogleFonts.poppins(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.deepPurple)),
-          const SizedBox(height: 14),
-          _PriceRow(label: 'Service Fee',   value: '₹719'),
-          const SizedBox(height: 8),
-          _PriceRow(label: 'Platform Fee',  value: '₹20'),
-          const SizedBox(height: 8),
-          _PriceRow(
-              label: 'Discount (CARE20)',
-              value: '−₹180',
-              valueColor: const Color(0xFF2E7D32)),
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 12),
-            child: Divider(height: 1, color: Color(0xFFF0F0F0)),
-          ),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('Total Paid',
-                  style: GoogleFonts.poppins(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.deepPurple)),
-              Text('₹739',
-                  style: GoogleFonts.poppins(
-                      fontSize: 17,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.orange)),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _PriceRow extends StatelessWidget {
-  final String label;
-  final String value;
-  final Color? valueColor;
-  const _PriceRow({required this.label, required this.value, this.valueColor});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return Column(
       children: [
-        Text(label,
-            style: GoogleFonts.poppins(
-                fontSize: 13,
-                color: AppColors.greyText,
-                fontWeight: FontWeight.w400)),
-        Text(value,
-            style: GoogleFonts.poppins(
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-                color: valueColor ?? AppColors.deepPurple)),
-      ],
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Bottom actions
-// ─────────────────────────────────────────────────────────────────────────────
-class _BottomActions extends StatelessWidget {
-  final VoidCallback onReschedule;
-  final VoidCallback onCancel;
-  const _BottomActions(
-      {required this.onReschedule, required this.onCancel});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius:
-            const BorderRadius.vertical(top: Radius.circular(20)),
-        boxShadow: [
-          BoxShadow(
-              color: Colors.black.withOpacity(0.06),
-              blurRadius: 16,
-              offset: const Offset(0, -4))
-        ],
-      ),
-      child: Row(
-        children: [
-          // Reschedule
-          Expanded(
-            child: SizedBox(
-              height: 50,
-              child: OutlinedButton.icon(
-                onPressed: onReschedule,
-                icon: const Icon(Icons.edit_calendar_rounded,
-                    size: 18, color: AppColors.purple),
-                label: Text('Reschedule',
-                    style: GoogleFonts.poppins(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.purple)),
-                style: OutlinedButton.styleFrom(
-                  side: const BorderSide(
-                      color: AppColors.purple, width: 1.5),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(
+                width: 110,
+                child: Text(
+                  label,
+                  style: GoogleFonts.poppins(
+                    fontSize: 13,
+                    color: AppColors.greyText,
+                  ),
                 ),
               ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          // Cancel
-          Expanded(
-            flex: 2,
-            child: SizedBox(
-              height: 50,
-              child: ElevatedButton.icon(
-                onPressed: onCancel,
-                icon: const Icon(Icons.cancel_outlined,
-                    size: 18, color: Colors.white),
-                label: Text('Cancel Appointment',
-                    style: GoogleFonts.poppins(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white)),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.red,
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
+              Expanded(
+                child: Text(
+                  value,
+                  textAlign: TextAlign.right,
+                  style: GoogleFonts.poppins(
+                    fontSize: 13,
+                    fontWeight: valueBold ? FontWeight.w700 : FontWeight.w400,
+                    color: AppColors.deepPurple,
+                    height: 1.4,
+                  ),
                 ),
               ),
-            ),
+            ],
           ),
-        ],
-      ),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Round icon button
-// ─────────────────────────────────────────────────────────────────────────────
-class _RoundBtn extends StatelessWidget {
-  final IconData icon;
-  final Color color;
-  final VoidCallback onTap;
-  const _RoundBtn(
-      {required this.icon, required this.color, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 38,
-        height: 38,
-        decoration: BoxDecoration(
-          color: color.withOpacity(0.10),
-          shape: BoxShape.circle,
         ),
-        child: Icon(icon, color: color, size: 18),
-      ),
+        if (!isLast)
+          const Divider(
+            height: 1,
+            color: Color(0xFFF5F5F5),
+            indent: 16,
+            endIndent: 16,
+          ),
+      ],
     );
   }
 }

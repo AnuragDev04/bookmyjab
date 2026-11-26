@@ -1,3 +1,4 @@
+import 'package:bookmyjab/pages/prescription_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -71,29 +72,65 @@ class _SelectAddressScreenState extends State<SelectAddressScreen> {
           child: const Icon(Icons.arrow_back_ios_new_rounded,
               color: AppColors.deepPurple, size: 20),
         ),
-        title: Text('Select Address',
-            style: GoogleFonts.poppins(
-                fontSize: 17,
-                fontWeight: FontWeight.w600,
-                color: AppColors.deepPurple)),
-        centerTitle: true,
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Select Address',
+                style: GoogleFonts.poppins(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.deepPurple)),
+            Text('Step 3 of 7',
+                style: GoogleFonts.poppins(
+                    fontSize: 11,
+                    color: AppColors.greyText,
+                    fontWeight: FontWeight.w400)),
+          ],
+        ),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 16),
+            child: Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                color: AppColors.orange.withOpacity(0.12),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(Icons.location_on_outlined,
+                  color: AppColors.orange, size: 18),
+            ),
+          ),
+        ],
         bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(1),
-          child: Container(height: 1, color: const Color(0xFFF0F0F0)),
+          preferredSize: const Size.fromHeight(5),
+          child: Stack(
+            children: [
+              Container(height: 5, color: const Color(0xFFEEEEEE)),
+              FractionallySizedBox(
+                widthFactor: 3 / 7,
+                child: Container(
+                  height: 5,
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [AppColors.orange, Color(0xFFFF5C00)],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
       body: Column(
         children: [
-          // ── Step indicator ─────────────────────────────────────────
-          _StepIndicator(currentStep: 2),
-
           Expanded(
             child: SingleChildScrollView(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // ── Map placeholder ──────────────────────────────
-                  Container(
+                 /* Container(
                     height: 180,
                     width: double.infinity,
                     color: const Color(0xFFE8E8F0),
@@ -118,7 +155,7 @@ class _SelectAddressScreenState extends State<SelectAddressScreen> {
                         ),
                       ],
                     ),
-                  ),
+                  ),*/
 
                   // ── Current Location ─────────────────────────────
                   Padding(
@@ -221,11 +258,7 @@ class _SelectAddressScreenState extends State<SelectAddressScreen> {
                     final addr = _addresses[i];
                     final selected = _selectedAddressIndex == i;
                     return GestureDetector(
-                      onTap: () {
-                        WidgetsBinding.instance.addPostFrameCallback((_) {
-                          setState(() => _selectedAddressIndex = i);
-                        });
-                      },
+                      onTap: () => setState(() => _selectedAddressIndex = i),
                       child: Container(
                         margin: const EdgeInsets.fromLTRB(16, 0, 16, 10),
                         padding: const EdgeInsets.all(14),
@@ -280,8 +313,27 @@ class _SelectAddressScreenState extends State<SelectAddressScreen> {
                                 ],
                               ),
                             ),
-                            const Icon(Icons.chevron_right_rounded,
-                                color: AppColors.greyText, size: 20),
+                            AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              width: 22,
+                              height: 22,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: selected
+                                    ? AppColors.orange
+                                    : Colors.transparent,
+                                border: Border.all(
+                                  color: selected
+                                      ? AppColors.orange
+                                      : const Color(0xFFCCCCCC),
+                                  width: 2,
+                                ),
+                              ),
+                              child: selected
+                                  ? const Icon(Icons.check_rounded,
+                                      color: Colors.white, size: 13)
+                                  : null,
+                            ),
                           ],
                         ),
                       ),
@@ -304,13 +356,13 @@ class _SelectAddressScreenState extends State<SelectAddressScreen> {
                 onPressed: () => Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => ConfirmBookingScreen(
+                    builder: (_) => PrescriptionScreen(
                       serviceName: widget.serviceName,
                       servicePrice: widget.servicePrice,
-                      selectedDate: widget.selectedDate,
+                     /* selectedDate: widget.selectedDate,
                       selectedTime: widget.selectedTime,
                       address: _addresses[_selectedAddressIndex].address
-                          .replaceAll('\n', ', '),
+                          .replaceAll('\n', ', '),*/
                     ),
                   ),
                 ),
@@ -345,10 +397,13 @@ class _AddAddressSheet extends StatefulWidget {
 
 class _AddAddressSheetState extends State<_AddAddressSheet> {
   int _selectedType = 0; // 0=Home, 1=Office, 2=Other
-  final _flatController     = TextEditingController();
-  final _areaController     = TextEditingController();
-  final _cityController     = TextEditingController();
-  final _pincodeController  = TextEditingController();
+  final _houseController       = TextEditingController();
+  final _apartmentController   = TextEditingController();
+  final _areaController        = TextEditingController();
+  final _cityController        = TextEditingController();
+  final _landmarkController    = TextEditingController();
+  final _contactNameController = TextEditingController();
+  final _contactNumController  = TextEditingController();
 
   static const _types = [
     _TypeBadge('Home',   Icons.home_outlined),
@@ -358,34 +413,51 @@ class _AddAddressSheetState extends State<_AddAddressSheet> {
 
   @override
   void dispose() {
-    _flatController.dispose();
+    _houseController.dispose();
+    _apartmentController.dispose();
     _areaController.dispose();
     _cityController.dispose();
-    _pincodeController.dispose();
+    _landmarkController.dispose();
+    _contactNameController.dispose();
+    _contactNumController.dispose();
     super.dispose();
   }
 
+  // per-field error messages
+  final Map<String, String?> _errors = {};
+
+  void _validate() {
+    setState(() {
+      _errors['house']       = _houseController.text.trim().isEmpty
+          ? 'House / Flat / Villa No. is required' : null;
+      _errors['area']        = _areaController.text.trim().isEmpty
+          ? 'Area / Sector is required' : null;
+      _errors['city']        = _cityController.text.trim().isEmpty
+          ? 'City is required' : null;
+      _errors['contactName'] = _contactNameController.text.trim().isEmpty
+          ? 'Contact person name is required' : null;
+      final num = _contactNumController.text.trim();
+      if (num.isEmpty) {
+        _errors['contactNum'] = 'Contact number is required';
+      } else if (num.length != 10) {
+        _errors['contactNum'] = 'Enter a valid 10-digit number';
+      } else {
+        _errors['contactNum'] = null;
+      }
+    });
+  }
+
   void _save() {
-    final flat    = _flatController.text.trim();
-    final area    = _areaController.text.trim();
-    final city    = _cityController.text.trim();
-    final pincode = _pincodeController.text.trim();
+    _validate();
+    if (_errors.values.any((e) => e != null)) return;
 
-    if (flat.isEmpty || area.isEmpty || city.isEmpty || pincode.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Please fill all fields',
-              style: GoogleFonts.poppins(fontSize: 13)),
-          backgroundColor: AppColors.purple,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10)),
-        ),
-      );
-      return;
-    }
+    final house = _houseController.text.trim();
+    final apt   = _apartmentController.text.trim();
+    final area  = _areaController.text.trim();
+    final city  = _cityController.text.trim();
 
-    final address = '$flat, $area,\n$city - $pincode';
+    final parts = [house, if (apt.isNotEmpty) apt, area, city];
+    final address = parts.join(', ');
     widget.onSave(_AddressData(
       label: _types[_selectedType].label,
       icon: _types[_selectedType].icon,
@@ -435,11 +507,7 @@ class _AddAddressSheetState extends State<_AddAddressSheet> {
                 children: List.generate(_types.length, (i) {
                   final sel = _selectedType == i;
                   return GestureDetector(
-                    onTap: () {
-                      WidgetsBinding.instance.addPostFrameCallback((_) {
-                        setState(() => _selectedType = i);
-                      });
-                    },
+                    onTap: () => setState(() => _selectedType = i),
                     child: Container(
                       margin: const EdgeInsets.only(right: 10),
                       padding: const EdgeInsets.symmetric(
@@ -460,8 +528,7 @@ class _AddAddressSheetState extends State<_AddAddressSheet> {
                         children: [
                           Icon(_types[i].icon,
                               size: 16,
-                              color:
-                                  sel ? Colors.white : AppColors.purple),
+                              color: sel ? Colors.white : AppColors.purple),
                           const SizedBox(width: 6),
                           Text(_types[i].label,
                               style: GoogleFonts.poppins(
@@ -478,54 +545,122 @@ class _AddAddressSheetState extends State<_AddAddressSheet> {
               ),
               const SizedBox(height: 20),
 
-              // ── Flat / House / Building ───────────────────────
+              // ── House / Flat / Villa No. ───────────────────────
               _SheetField(
-                controller: _flatController,
-                label: 'Flat / House / Building',
-                hint: 'Enter flat, house or building no.',
-                icon: Icons.home_work_outlined,
+                controller: _houseController,
+                label: 'House / Flat / Villa No.',
+                hint: 'Enter house / flat / villa number',
+                required: true,
+                icon: Icons.home_outlined,
+                error: _errors['house'],
+                onChanged: (_) => setState(() => _errors['house'] = null),
               ),
               const SizedBox(height: 14),
 
-              // ── Area / Street / Landmark ─────────────────────
+              // ── Apartment / Society / Building ────────────────
+              _SheetField(
+                controller: _apartmentController,
+                label: 'Apartment / Society / Building',
+                hint: 'Enter apartment or society name',
+                icon: Icons.apartment_outlined,
+              ),
+              const SizedBox(height: 14),
+
+              // ── Area / Sector ─────────────────────────────────
               _SheetField(
                 controller: _areaController,
-                label: 'Area / Street / Landmark',
-                hint: 'Enter area, street or landmark',
+                label: 'Area / Sector',
+                hint: 'Enter area or sector',
+                required: true,
                 icon: Icons.place_outlined,
+                error: _errors['area'],
+                onChanged: (_) => setState(() => _errors['area'] = null),
               ),
               const SizedBox(height: 14),
 
-              // ── City & Pincode side by side ───────────────────
+              // ── City ──────────────────────────────────────────
+              _SheetField(
+                controller: _cityController,
+                label: 'City',
+                hint: 'Enter city name',
+                required: true,
+                icon: Icons.location_city_outlined,
+                error: _errors['city'],
+                onChanged: (_) => setState(() => _errors['city'] = null),
+              ),
+              const SizedBox(height: 14),
+
+              // ── Landmark / Notes for Nurse ────────────────────
+              _SheetField(
+                controller: _landmarkController,
+                label: 'Landmark / Notes for Nurse',
+                hint: 'Enter nearby landmark or notes',
+                icon: Icons.edit_note_rounded,
+                maxLines: 2,
+              ),
+              const SizedBox(height: 22),
+
+              // ── Contact Person Details heading ────────────────
               Row(
                 children: [
-                  Expanded(
-                    child: _SheetField(
-                      controller: _cityController,
-                      label: 'City',
-                      hint: 'Enter city',
-                      icon: Icons.location_city_outlined,
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: AppColors.orange.withOpacity(0.10),
+                      borderRadius: BorderRadius.circular(8),
                     ),
+                    child: const Icon(Icons.person_outline_rounded,
+                        color: AppColors.orange, size: 18),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _SheetField(
-                      controller: _pincodeController,
-                      label: 'Pincode',
-                      hint: '6-digit pincode',
-                      icon: Icons.pin_drop_outlined,
-                      keyboardType: TextInputType.number,
-                      maxLength: 6,
+                  const SizedBox(width: 10),
+                  Text(
+                    'Contact Person Details',
+                    style: GoogleFonts.poppins(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.deepPurple,
                     ),
                   ),
                 ],
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Who should the nurse contact on arrival?',
+                style: GoogleFonts.poppins(
+                    fontSize: 11, color: AppColors.greyText),
+              ),
+              const SizedBox(height: 14),
+
+              // ── Contact Person Name ───────────────────────────
+              _SheetField(
+                controller: _contactNameController,
+                label: 'Contact Person Name',
+                hint: 'Enter full name',
+                required: true,
+                icon: Icons.badge_outlined,
+                error: _errors['contactName'],
+                onChanged: (_) => setState(() => _errors['contactName'] = null),
+              ),
+              const SizedBox(height: 14),
+
+              // ── Contact Number ────────────────────────────────
+              _SheetField(
+                controller: _contactNumController,
+                label: 'Contact Number',
+                hint: 'Enter 10-digit mobile number',
+                required: true,
+                icon: Icons.phone_outlined,
+                keyboardType: TextInputType.phone,
+                maxLength: 10,
+                error: _errors['contactNum'],
+                onChanged: (_) => setState(() => _errors['contactNum'] = null),
               ),
               const SizedBox(height: 24),
 
               // ── Buttons ────────────────────────────────────────
               Row(
                 children: [
-                  // Save
                   Expanded(
                     child: SizedBox(
                       height: 50,
@@ -546,7 +681,6 @@ class _AddAddressSheetState extends State<_AddAddressSheet> {
                     ),
                   ),
                   const SizedBox(width: 12),
-                  // Cancel
                   Expanded(
                     child: SizedBox(
                       height: 50,
@@ -576,22 +710,24 @@ class _AddAddressSheetState extends State<_AddAddressSheet> {
   }
 }
 
-// ── Sheet field ───────────────────────────────────────────────────────────────
-class _SheetField extends StatelessWidget {
+// ── Address field (used in main screen form) ──────────────────────────────────
+class _AddressField extends StatelessWidget {
   final TextEditingController controller;
   final String label;
   final String hint;
   final IconData icon;
   final TextInputType keyboardType;
   final int? maxLength;
+  final int maxLines;
 
-  const _SheetField({
+  const _AddressField({
     required this.controller,
     required this.label,
     required this.hint,
     required this.icon,
     this.keyboardType = TextInputType.text,
     this.maxLength,
+    this.maxLines = 1,
   });
 
   @override
@@ -599,28 +735,37 @@ class _SheetField extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label,
-            style: GoogleFonts.poppins(
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-                color: AppColors.deepPurple)),
+        Text(
+          label,
+          style: GoogleFonts.poppins(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: AppColors.deepPurple,
+          ),
+        ),
         const SizedBox(height: 6),
         Container(
           decoration: BoxDecoration(
-            border: Border.all(color: const Color(0xFFE0E0E0)),
-            borderRadius: BorderRadius.circular(10),
+            color: const Color(0xFFF7F6FC),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0xFFE0E0EE)),
           ),
           child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(width: 12),
-              Icon(icon, size: 18, color: AppColors.purple),
+              Padding(
+                padding: EdgeInsets.only(
+                    left: 12, top: maxLines > 1 ? 13 : 0),
+                child: Icon(icon, size: 18, color: AppColors.purple),
+              ),
               const SizedBox(width: 8),
               Expanded(
                 child: TextField(
                   controller: controller,
                   keyboardType: keyboardType,
                   maxLength: maxLength,
-                  inputFormatters: keyboardType == TextInputType.number
+                  maxLines: maxLines,
+                  inputFormatters: keyboardType == TextInputType.phone
                       ? [FilteringTextInputFormatter.digitsOnly]
                       : null,
                   style: GoogleFonts.poppins(
@@ -632,13 +777,174 @@ class _SheetField extends StatelessWidget {
                     border: InputBorder.none,
                     counterText: '',
                     contentPadding:
-                        const EdgeInsets.symmetric(vertical: 12),
+                        const EdgeInsets.symmetric(vertical: 13),
                   ),
                 ),
               ),
             ],
           ),
         ),
+      ],
+    );
+  }
+}
+
+// ── Sheet field ───────────────────────────────────────────────────────────────
+class _SheetField extends StatefulWidget {
+  final TextEditingController controller;
+  final String label;
+  final String hint;
+  final bool required;
+  final IconData icon;
+  final TextInputType keyboardType;
+  final int? maxLength;
+  final int maxLines;
+  final String? error;
+  final ValueChanged<String>? onChanged;
+
+  const _SheetField({
+    required this.controller,
+    required this.label,
+    required this.hint,
+    required this.icon,
+    this.required = false,
+    this.keyboardType = TextInputType.text,
+    this.maxLength,
+    this.maxLines = 1,
+    this.error,
+    this.onChanged,
+  });
+
+  @override
+  State<_SheetField> createState() => _SheetFieldState();
+}
+
+class _SheetFieldState extends State<_SheetField> {
+  late final FocusNode _focus;
+  bool _isFocused = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _focus = FocusNode()
+      ..addListener(() {
+        setState(() => _isFocused = _focus.hasFocus);
+      });
+  }
+
+  @override
+  void dispose() {
+    _focus.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final hasError = widget.error != null && widget.error!.isNotEmpty;
+    final borderColor = hasError
+        ? AppColors.red
+        : _isFocused
+            ? AppColors.purple
+            : const Color(0xFFE0E0E0);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Label row with optional required asterisk
+        RichText(
+          text: TextSpan(
+            children: [
+              TextSpan(
+                text: widget.label,
+                style: GoogleFonts.poppins(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.deepPurple,
+                ),
+              ),
+              if (widget.required)
+                TextSpan(
+                  text: ' *',
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.red,
+                  ),
+                ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 6),
+        AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          decoration: BoxDecoration(
+            color: _isFocused
+                ? AppColors.purple.withOpacity(0.03)
+                : Colors.white,
+            border: Border.all(color: borderColor, width: 1.4),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(left: 12),
+                child: Icon(widget.icon,
+                    size: 18,
+                    color: hasError
+                        ? AppColors.red
+                        : _isFocused
+                            ? AppColors.purple
+                            : AppColors.purple),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: TextField(
+                  controller: widget.controller,
+                  focusNode: _focus,
+                  keyboardType: widget.keyboardType,
+                  maxLength: widget.maxLength,
+                  maxLines: widget.maxLines,
+                  onChanged: widget.onChanged,
+                  inputFormatters: widget.keyboardType == TextInputType.phone
+                      ? [FilteringTextInputFormatter.digitsOnly]
+                      : null,
+                  style: GoogleFonts.poppins(
+                      fontSize: 13, color: AppColors.deepPurple),
+                  decoration: InputDecoration(
+                    hintText: widget.hint,
+                    hintStyle: GoogleFonts.poppins(
+                        fontSize: 13, color: AppColors.greyText),
+                    border: InputBorder.none,
+                    counterText: '',
+                    contentPadding:
+                        const EdgeInsets.symmetric(vertical: 13),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        // Inline error
+        if (hasError) ...[
+          const SizedBox(height: 4),
+          Row(
+            children: [
+              const Icon(Icons.error_outline_rounded,
+                  size: 13, color: AppColors.red),
+              const SizedBox(width: 4),
+              Expanded(
+                child: Text(
+                  widget.error!,
+                  style: GoogleFonts.poppins(
+                    fontSize: 11,
+                    color: AppColors.red,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
       ],
     );
   }
@@ -688,77 +994,4 @@ class _MapGridPainter extends CustomPainter {
   bool shouldRepaint(_MapGridPainter old) => false;
 }
 
-// ── Step indicator ────────────────────────────────────────────────────────────
-class _StepIndicator extends StatelessWidget {
-  final int currentStep;
-  const _StepIndicator({required this.currentStep});
 
-  @override
-  Widget build(BuildContext context) {
-    final steps = ['Service', 'Date & Time', 'Address', 'Confirm'];
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      child: Row(
-        children: List.generate(steps.length * 2 - 1, (i) {
-          if (i.isOdd) {
-            final stepIndex = i ~/ 2;
-            final done = stepIndex < currentStep;
-            return Expanded(
-              child: Container(
-                height: 2,
-                color: done ? AppColors.purple : const Color(0xFFE0E0E0),
-              ),
-            );
-          }
-          final stepIndex = i ~/ 2;
-          final done = stepIndex < currentStep;
-          final active = stepIndex == currentStep;
-
-          final bgColor = active
-              ? AppColors.orange
-              : done
-                  ? AppColors.purple
-                  : const Color(0xFFE0E0E0);
-
-          return Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 28,
-                height: 28,
-                decoration: BoxDecoration(
-                  color: bgColor,
-                  shape: BoxShape.circle,
-                ),
-                child: Center(
-                  child: done
-                      ? const Icon(Icons.check_rounded,
-                          color: Colors.white, size: 14)
-                      : Text('${stepIndex + 1}',
-                          style: GoogleFonts.poppins(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: active
-                                  ? Colors.white
-                                  : AppColors.greyText)),
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(steps[stepIndex],
-                  style: GoogleFonts.poppins(
-                      fontSize: 9,
-                      fontWeight: active || done
-                          ? FontWeight.w600
-                          : FontWeight.w400,
-                      color: active
-                          ? AppColors.orange
-                          : done
-                              ? AppColors.purple
-                              : AppColors.greyText)),
-            ],
-          );
-        }),
-      ),
-    );
-  }
-}

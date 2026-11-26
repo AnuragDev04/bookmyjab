@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../utils/colors.dart';
 import 'book_appointment_screen.dart';
+import 'consent_screen.dart';
 import 'nurse_detail_screen.dart';
 
 class ServiceDetailScreen extends StatefulWidget {
@@ -403,9 +404,7 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                   onPressed: () => Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) => BookAppointmentScreen(
-                        serviceName: widget.label,
-                        servicePrice: info.price,
+                      builder: (_) => BookAppointmentScreen(services: [],
                       ),
                     ),
                   ),

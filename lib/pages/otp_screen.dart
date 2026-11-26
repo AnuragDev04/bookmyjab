@@ -1,9 +1,13 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:bookmyjab/pages/login_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import '../utils/colors.dart';
+import '../utils/constants.dart';
 import 'home_screen.dart';
 
 class OtpScreen extends StatefulWidget {
@@ -27,6 +31,7 @@ class _OtpScreenState extends State<OtpScreen> {
 
   int _secondsLeft = 25;
   Timer? _timer;
+  bool _isLoading = false;
 
   @override
   void initState() {
@@ -65,12 +70,144 @@ class _OtpScreenState extends State<OtpScreen> {
     }
   }
 
-  void _verify() {
-    Navigator.pushAndRemoveUntil(
-      context,
-      MaterialPageRoute(builder: (_) => const LoginScreen()),
-      (route) => false,
-    );
+  Future<void> _verify() async {
+    final otp = _controllers.map((c) => c.text).join();
+
+    if (otp.length < 6) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Please enter the 6-digit OTP',
+              style: GoogleFonts.poppins(fontSize: 13)),
+          backgroundColor: AppColors.red,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10)),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
+    if (_isLoading) return;
+    setState(() => _isLoading = true);
+
+    try {
+      // Retrieve saved user_id from SharedPreferences
+      final prefs = await SharedPreferences.getInstance();
+      final userId = prefs.getString('user_id') ?? '';
+
+      final response = await http.post(
+        Uri.parse(AppConstants.VERIFY_OTP_API),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'user_id': userId,
+          'otp': otp,
+        }),
+      );
+
+      debugPrint('OTP verify response: ${response.body}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final Map<String, dynamic> data = jsonDecode(response.body);
+
+        final String? message = data['message']?.toString();
+        final bool isSuccess =
+            (data['status'] == 'true' || data['status'] == true) &&
+                (data['success'] == '1' ||
+                    data['success'] == 1 ||
+                    data['success'] == true) ||
+            (message != null &&
+                message.toLowerCase().contains('success'));
+
+        if (isSuccess) {
+          setState(() => _isLoading = false);
+
+          if (!mounted) return;
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                message ?? 'OTP verified successfully!',
+                style: GoogleFonts.poppins(fontSize: 13),
+              ),
+              backgroundColor: const Color(0xFF2E7D32),
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
+              duration: const Duration(seconds: 2),
+            ),
+          );
+
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (_) => const LoginScreen()),
+            (route) => false,
+          );
+        } else {
+          setState(() => _isLoading = false);
+          final errorMessage =
+              data['message']?.toString() ?? 'OTP verification failed.';
+          debugPrint('OTP API Error: $errorMessage');
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Verification failed: $errorMessage',
+                style: GoogleFonts.poppins(fontSize: 13),
+              ),
+              backgroundColor: AppColors.red,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
+      } else {
+        String errorMessage;
+        try {
+          final Map<String, dynamic> errData = jsonDecode(response.body);
+          errorMessage = errData['message']?.toString() ??
+              'Verification failed: HTTP ${response.statusCode}';
+        } catch (_) {
+          errorMessage = 'Verification failed: HTTP ${response.statusCode}';
+        }
+
+        setState(() => _isLoading = false);
+        debugPrint('OTP HTTP Error: ${response.statusCode}');
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              errorMessage,
+              style: GoogleFonts.poppins(fontSize: 13),
+            ),
+            backgroundColor: AppColors.red,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10)),
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    } catch (e) {
+      setState(() => _isLoading = false);
+      debugPrint('OTP verify error: $e');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Error: $e',
+            style: GoogleFonts.poppins(fontSize: 13),
+          ),
+          backgroundColor: AppColors.red,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10)),
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
   }
 
   @override
@@ -255,14 +392,25 @@ class _OtpScreenState extends State<OtpScreen> {
                       width: double.infinity,
                       height: 52,
                       child: ElevatedButton(
-                        onPressed: _verify,
+                        onPressed: _isLoading ? null : _verify,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.orange,
+                          disabledBackgroundColor:
+                              AppColors.orange.withOpacity(0.60),
                           shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(14)),
                           elevation: 0,
                         ),
-                        child: Row(
+                        child: _isLoading
+                            ? const SizedBox(
+                                width: 22,
+                                height: 22,
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 2.5,
+                                ),
+                              )
+                            : Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Text(

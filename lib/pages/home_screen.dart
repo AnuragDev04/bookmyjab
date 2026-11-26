@@ -1,12 +1,15 @@
 import 'dart:async';
-import 'package:bookmyjab/pages/book_appointment_screen.dart';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:video_player/video_player.dart';
 import '../utils/colors.dart';
+import '../utils/constants.dart';
 import 'appointment_detail_screen.dart';
 import 'appointments_screen.dart';
-import 'nurse_detail_screen.dart';
 import 'profile_screen.dart';
 import 'select_address_screen.dart';
 import 'service_detail_screen.dart';
@@ -21,7 +24,10 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  int _currentIndex = 0;
+  int _currentIndex = 2;
+
+  // Keep pages stable — do not rebuild them inside build()
+  late final List<Widget> _pages;
 
   @override
   void initState() {
@@ -30,45 +36,29 @@ class _HomeScreenState extends State<HomeScreen> {
       statusBarColor: Colors.transparent,
       statusBarIconBrightness: Brightness.dark,
     ));
+    // Index mapping: 0=Appointments, 1=Services, 2=Home, 3=Notifications, 4=Profile
+    _pages = [
+      const AppointmentsScreen(),
+      const ServicesScreen(),
+      const _HomeBody(),
+      const _NotificationsScreen(),
+      const ProfileScreen(),
+    ];
   }
 
   @override
   Widget build(BuildContext context) {
-    final pages = [
-      Scaffold(
-        backgroundColor: const Color(0xFFF5F5FA),
-        body: SafeArea(child: _HomeBody()),
-        extendBody: true,
-      ),
-      const AppointmentsScreen(),
-      const SizedBox(), // Book Now placeholder
-      const ServicesScreen(),
-      const ProfileScreen(),
-    ];
-
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5FA),
       body: IndexedStack(
         index: _currentIndex,
-        children: pages,
+        children: _pages,
       ),
       extendBody: true,
       bottomNavigationBar: _BottomNav(
         currentIndex: _currentIndex,
-        onTap: (i) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            setState(() => _currentIndex = i);
-          });
-        },
-        onBookNow: () => Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => const BookAppointmentScreen(
-              serviceName: 'Home Nursing',
-              servicePrice: '₹739',
-            ),
-          ),
-        ),
+        onTap: (i) => setState(() => _currentIndex = i),
+        onHomeNav: () => setState(() => _currentIndex = 2),
       ),
     );
   }
@@ -76,6 +66,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
 // ── Home Body ─────────────────────────────────────────────────────────────────
 class _HomeBody extends StatefulWidget {
+  const _HomeBody();
+
   @override
   State<_HomeBody> createState() => _HomeBodyState();
 }
@@ -83,17 +75,18 @@ class _HomeBody extends StatefulWidget {
 class _HomeBodyState extends State<_HomeBody> {
   final TextEditingController _searchController = TextEditingController();
   String _query = '';
+  String _firstName = '';
 
   // Master list of all searchable services
   static const _allServices = [
-    _ServiceData('Home\nNursing',       Icons.home_outlined,                AppColors.purple),
-    _ServiceData('Vaccination',         Icons.vaccines_outlined,             AppColors.orange),
-    _ServiceData('Patient\nCare',       Icons.personal_injury_outlined,      AppColors.purple),
-    _ServiceData('Elder\nCare',         Icons.elderly_outlined,              AppColors.orange),
-    _ServiceData('Medical\nAssistance', Icons.medical_services_outlined,     AppColors.purple),
-    _ServiceData('Physio-\ntherapy',    Icons.accessibility_new_outlined,    AppColors.orange),
-    _ServiceData('Lab Test',            Icons.science_outlined,              AppColors.purple),
-    _ServiceData('Emergency\nCare',     Icons.emergency_outlined,            AppColors.orange),
+    _ServiceData(label: 'Home\nNursing',       subtitle: '',  price: '₹ 499', icon: Icons.home_outlined,                color: AppColors.purple),
+    _ServiceData(label: 'Vaccination',         subtitle: '',  price: '₹ 299', icon: Icons.vaccines_outlined,            color: AppColors.orange),
+    _ServiceData(label: 'Patient\nCare',       subtitle: '',  price: '₹ 399', icon: Icons.personal_injury_outlined,     color: AppColors.purple),
+    _ServiceData(label: 'Elder\nCare',         subtitle: '',  price: '₹ 599', icon: Icons.elderly_outlined,             color: AppColors.orange),
+    _ServiceData(label: 'Medical\nAssistance', subtitle: '',  price: '₹ 799', icon: Icons.medical_services_outlined,    color: AppColors.purple),
+    _ServiceData(label: 'Physio-\ntherapy',   subtitle: '',  price: '₹ 699', icon: Icons.accessibility_new_outlined,   color: AppColors.orange),
+    _ServiceData(label: 'Lab Test',            subtitle: '',  price: '₹ 199', icon: Icons.science_outlined,             color: AppColors.purple),
+    _ServiceData(label: 'Emergency\nCare',     subtitle: '',  price: '₹ 499', icon: Icons.emergency_outlined,           color: AppColors.orange),
   ];
 
   List<_ServiceData> get _filteredServices {
@@ -102,6 +95,18 @@ class _HomeBodyState extends State<_HomeBody> {
     return _allServices
         .where((s) => s.label.toLowerCase().replaceAll('\n', ' ').contains(q))
         .toList();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserName();
+  }
+
+  Future<void> _loadUserName() async {
+    final prefs = await SharedPreferences.getInstance();
+    final name = prefs.getString('user_first_name') ?? '';
+    if (mounted) setState(() => _firstName = name);
   }
 
   @override
@@ -116,14 +121,13 @@ class _HomeBodyState extends State<_HomeBody> {
     final isSearching = _query.isNotEmpty;
 
     return SingleChildScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── Top bar ──────────────────────────────────────────────────
-          _TopBar(),
+          SizedBox(height: MediaQuery.of(context).padding.top),
+          _TopBar(firstName: _firstName),
           const SizedBox(height: 18),
-
-          // ── Search bar ───────────────────────────────────────────────
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: _SearchBar(
@@ -136,8 +140,6 @@ class _HomeBodyState extends State<_HomeBody> {
             ),
           ),
           const SizedBox(height: 20),
-
-          // ── Search results (shown when query is active) ──────────────
           if (isSearching) ...[
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -166,14 +168,9 @@ class _HomeBodyState extends State<_HomeBody> {
               ),
             const SizedBox(height: 96),
           ],
-
-          // ── Normal content (hidden when searching) ───────────────────
           if (!isSearching) ...[
-            // ── Banner Carousel ────────────────────────────────────────
             _BannerCarousel(),
             const SizedBox(height: 24),
-
-            // ── Quick Services ─────────────────────────────────────────
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: _SectionHeader(
@@ -186,78 +183,30 @@ class _HomeBodyState extends State<_HomeBody> {
             ),
             const SizedBox(height: 14),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 16),
               child: _QuickServicesGrid(),
             ),
             const SizedBox(height: 20),
-
-            // ── Promo Banner ───────────────────────────────────────────
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: _PromoBanner(),
             ),
             const SizedBox(height: 24),
-
-            // ── Nearby Nurses ──────────────────────────────────────────
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: _SectionHeader(title: 'Nearby Nurses', onViewAll: () {}),
-            ),
-            const SizedBox(height: 12),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: _NurseCard(
-                name: 'Priya Sharma',
-                rating: '4.8',
-                reviews: '120',
-                experience: '5 Years Exp.',
-                distance: '1.2 km away',
+              child: Text(
+                'Upcoming Appointment',
+                style: GoogleFonts.poppins(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.deepPurple,
+                ),
               ),
-            ),
-            const SizedBox(height: 12),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: _NurseCard(
-                name: 'Anjali Verma',
-                rating: '4.6',
-                reviews: '98',
-                experience: '3 Years Exp.',
-                distance: '2.4 km away',
-              ),
-            ),
-            const SizedBox(height: 28),
-
-            // ── Upcoming Appointment ────────────────────────────────
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Text('Upcoming Appointment',
-                  style: GoogleFonts.poppins(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.deepPurple)),
             ),
             const SizedBox(height: 12),
             const Padding(
               padding: EdgeInsets.symmetric(horizontal: 16),
               child: _UpcomingAppointmentCard(),
-            ),
-            const SizedBox(height: 28),
-
-            // ── Popular Services (auto-scroll) ─────────────────────
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: _SectionHeader(
-                title: 'Popular Services',
-                onViewAll: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const ServicesScreen()),
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-            Padding(
-              padding: const EdgeInsets.only(left: 16),
-              child: const _PopularServicesCarousel(),
             ),
             const SizedBox(height: 96),
           ],
@@ -265,268 +214,6 @@ class _HomeBodyState extends State<_HomeBody> {
       ),
     );
   }
-}
-
-// ── Popular Services Carousel (auto-scroll) ───────────────────────────────────
-class _PopularServicesCarousel extends StatefulWidget {
-  const _PopularServicesCarousel();
-
-  @override
-  State<_PopularServicesCarousel> createState() =>
-      _PopularServicesCarouselState();
-}
-
-class _PopularServicesCarouselState extends State<_PopularServicesCarousel> {
-  late final PageController _controller;
-  late final Timer _timer;
-  int _current = 0;
-
-  static const _items = [
-    _PopularService(
-      title: 'Home Nursing',
-      subtitle: 'Professional care at your doorstep',
-      price: '₹499',
-      icon: Icons.home_outlined,
-      gradient: [Color(0xFF5B2D8E), Color(0xFF9C57D3)],
-    ),
-    _PopularService(
-      title: 'Elder Care',
-      subtitle: 'Compassionate care for seniors',
-      price: '₹599',
-      icon: Icons.elderly_outlined,
-      gradient: [Color(0xFFE65100), Color(0xFFFF8A50)],
-    ),
-    _PopularService(
-      title: 'Physiotherapy',
-      subtitle: 'Rehab & pain relief at home',
-      price: '₹699',
-      icon: Icons.accessibility_new_outlined,
-      gradient: [Color(0xFF1565C0), Color(0xFF42A5F5)],
-    ),
-    _PopularService(
-      title: 'Lab Test',
-      subtitle: 'Sample collection at your home',
-      price: '₹199',
-      icon: Icons.science_outlined,
-      gradient: [Color(0xFF2E7D32), Color(0xFF66BB6A)],
-    ),
-    _PopularService(
-      title: 'Vaccination',
-      subtitle: 'All age group vaccines at home',
-      price: '₹299',
-      icon: Icons.vaccines_outlined,
-      gradient: [Color(0xFF6A1B9A), Color(0xFFBA68C8)],
-    ),
-  ];
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = PageController(viewportFraction: 0.82);
-    _timer = Timer.periodic(const Duration(seconds: 3), (_) {
-      final next = (_current + 1) % _items.length;
-      _controller.animateToPage(
-        next,
-        duration: const Duration(milliseconds: 500),
-        curve: Curves.easeInOut,
-      );
-    });
-  }
-
-  @override
-  void dispose() {
-    _timer.cancel();
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SizedBox(
-          height: 148,
-          child: PageView.builder(
-            controller: _controller,
-            padEnds: false,
-            itemCount: _items.length,
-            onPageChanged: (i) => setState(() => _current = i),
-            itemBuilder: (_, i) {
-              final item = _items[i];
-              final accent = item.gradient.first;
-              final isActive = _current == i;
-
-              return GestureDetector(
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => ServiceDetailScreen(
-                      label: item.title,
-                      description: item.subtitle,
-                      icon: item.icon,
-                      color: accent,
-                    ),
-                  ),
-                ),
-                child: AnimatedScale(
-                  scale: isActive ? 1.0 : 0.95,
-                  duration: const Duration(milliseconds: 300),
-                  child: Container(
-                    margin: const EdgeInsets.only(right: 12, top: 4, bottom: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(18),
-                      border: Border.all(
-                        color: isActive
-                            ? accent.withOpacity(0.35)
-                            : const Color(0xFFEEEEEE),
-                        width: 1.5,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: isActive
-                              ? accent.withOpacity(0.18)
-                              : Colors.black.withOpacity(0.05),
-                          blurRadius: isActive ? 16 : 8,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Stack(
-                      children: [
-                        // Soft tinted circle in top-right
-                        Positioned(
-                          right: -16,
-                          top: -16,
-                          child: Container(
-                            width: 90,
-                            height: 90,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: accent.withOpacity(0.07),
-                            ),
-                          ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Row(
-                            children: [
-                              // Icon box
-                              Container(
-                                width: 50,
-                                height: 50,
-                                decoration: BoxDecoration(
-                                  color: accent.withOpacity(0.12),
-                                  borderRadius: BorderRadius.circular(14),
-                                ),
-                                child: Icon(item.icon, color: accent, size: 26),
-                              ),
-                              const SizedBox(width: 14),
-                              // Text content
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Text(item.title,
-                                        style: GoogleFonts.poppins(
-                                            fontSize: 15,
-                                            fontWeight: FontWeight.w700,
-                                            color: AppColors.deepPurple)),
-                                    const SizedBox(height: 3),
-                                    Text(item.subtitle,
-                                        style: GoogleFonts.poppins(
-                                            fontSize: 11,
-                                            color: AppColors.greyText,
-                                            height: 1.4)),
-                                    const SizedBox(height: 10),
-                                    Row(
-                                      children: [
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                              horizontal: 10, vertical: 4),
-                                          decoration: BoxDecoration(
-                                            color: accent.withOpacity(0.10),
-                                            borderRadius:
-                                                BorderRadius.circular(20),
-                                          ),
-                                          child: Text('From ${item.price}',
-                                              style: GoogleFonts.poppins(
-                                                  fontSize: 11,
-                                                  fontWeight: FontWeight.w600,
-                                                  color: accent)),
-                                        ),
-                                        const Spacer(),
-                                        Container(
-                                          width: 28,
-                                          height: 28,
-                                          decoration: BoxDecoration(
-                                            color: accent.withOpacity(0.12),
-                                            shape: BoxShape.circle,
-                                          ),
-                                          child: Icon(
-                                              Icons.arrow_forward_rounded,
-                                              color: accent,
-                                              size: 14),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-        const SizedBox(height: 10),
-        // Dot indicators — aligned with 16px page padding
-        Padding(
-          padding: const EdgeInsets.only(left: 16),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: List.generate(
-              _items.length,
-              (i) => AnimatedContainer(
-                duration: const Duration(milliseconds: 250),
-                margin: const EdgeInsets.only(right: 5),
-                width: _current == i ? 20 : 6,
-                height: 6,
-                decoration: BoxDecoration(
-                  color: _current == i
-                      ? AppColors.purple
-                      : AppColors.purple.withOpacity(0.25),
-                  borderRadius: BorderRadius.circular(3),
-                ),
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _PopularService {
-  final String title;
-  final String subtitle;
-  final String price;
-  final IconData icon;
-  final List<Color> gradient;
-  const _PopularService({
-    required this.title,
-    required this.subtitle,
-    required this.price,
-    required this.icon,
-    required this.gradient,
-  });
 }
 
 // ── Upcoming Appointment Card ─────────────────────────────────────────────────
@@ -541,7 +228,7 @@ class _UpcomingAppointmentCard extends StatelessWidget {
         MaterialPageRoute(
           builder: (_) => const AppointmentDetailScreen(
             serviceName: 'Home Nursing',
-            selectedDate: '24 May 2025',
+            selectedDate: '24 October 2026',
             selectedTime: '10:00 AM',
             address: '12, Park Street, Bangalore,\nKarnataka - 560001',
             bookingId: 'BMJ202505240001',
@@ -755,12 +442,61 @@ class _BannerCarousel extends StatefulWidget {
 class _BannerCarouselState extends State<_BannerCarousel> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
-  late Timer _timer;
+  Timer? _autoScrollTimer;
+
+  List<_BannerData> _banners = [];
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _timer = Timer.periodic(const Duration(seconds: 3), (_) {
+    _fetchBanners();
+  }
+
+  Future<void> _fetchBanners() async {
+    try {
+      final response = await http.get(
+        Uri.parse(AppConstants.BANNER_LIST_API),
+        headers: {'Content-Type': 'application/json'},
+      ).timeout(const Duration(seconds: 6));
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = jsonDecode(response.body);
+
+        if (data['status'] == 'true' &&
+            (data['success'] == '1' || data['success'] == 1)) {
+          final List<dynamic> items = data['data'];
+          final loaded = items.map((item) => _BannerData(
+            id: item['id']?.toString() ?? '',
+            heading: item['banner_heading']?.toString() ?? '',
+            title: item['banner_title']?.toString() ?? '',
+            desc: item['banner_desc']?.toString() ?? '',
+            videoUrl: item['banner_vedio']?.toString() ?? '',
+          )).toList();
+
+          if (mounted) {
+            setState(() {
+              _banners = loaded;
+              _isLoading = false;
+            });
+            _startAutoScroll();
+          }
+        } else {
+          if (mounted) setState(() => _isLoading = false);
+        }
+      } else {
+        if (mounted) setState(() => _isLoading = false);
+      }
+    } catch (e) {
+      debugPrint('Banner fetch error: $e');
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  void _startAutoScroll() {
+    _autoScrollTimer?.cancel();
+    _autoScrollTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      if (_banners.isEmpty) return;
       final next = (_currentPage + 1) % _banners.length;
       _pageController.animateToPage(
         next,
@@ -770,46 +506,42 @@ class _BannerCarouselState extends State<_BannerCarousel> {
     });
   }
 
-  static const _banners = [
-    _BannerData(
-      title: 'Flat 20% OFF',
-      subtitle: 'On your first booking',
-      code: 'Use Code: CARE20',
-      icon: Icons.medical_services_outlined,
-      accent: AppColors.purple,
-      image: 'assets/images/demo1.png',
-    ),
-    _BannerData(
-      title: 'Free Consultation',
-      subtitle: 'Book a nurse today',
-      code: 'Limited Time Offer',
-      icon: Icons.health_and_safety_outlined,
-      accent: AppColors.orange,
-      image: 'assets/images/demo2.png',
-    ),
-    _BannerData(
-      title: 'Elder Care Plans',
-      subtitle: 'Tailored for your loved ones',
-      code: 'Starting ₹499/month',
-      icon: Icons.elderly_outlined,
-      accent: AppColors.purple,
-      image: 'assets/images/demo3.png',
-    ),
-  ];
-
   @override
   void dispose() {
-    _timer.cancel();
+    _autoScrollTimer?.cancel();
     _pageController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Container(
+          height: 160,
+          decoration: BoxDecoration(
+            color: AppColors.purple.withOpacity(0.07),
+            borderRadius: BorderRadius.circular(18),
+          ),
+          child: const Center(
+            child: CircularProgressIndicator(
+              color: AppColors.purple,
+              strokeWidth: 2.5,
+            ),
+          ),
+        ),
+      );
+    }
+
+    if (_banners.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
     return Column(
       children: [
         SizedBox(
-          height: 130,
+          height: 160,
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: PageView.builder(
@@ -848,35 +580,81 @@ class _BannerCarouselState extends State<_BannerCarousel> {
   }
 }
 
+// ── Banner data model ─────────────────────────────────────────────────────────
 class _BannerData {
+  final String id;
+  final String heading;
   final String title;
-  final String subtitle;
-  final String code;
-  final IconData icon;
-  final Color accent;
-  final String image;
+  final String desc;
+  final String videoUrl;
+
   const _BannerData({
+    required this.id,
+    required this.heading,
     required this.title,
-    required this.subtitle,
-    required this.code,
-    required this.icon,
-    required this.accent,
-    required this.image,
+    required this.desc,
+    required this.videoUrl,
   });
 }
 
-class _BannerCard extends StatelessWidget {
+// ── Banner card with video player ─────────────────────────────────────────────
+class _BannerCard extends StatefulWidget {
   final _BannerData data;
   const _BannerCard({required this.data});
+
+  @override
+  State<_BannerCard> createState() => _BannerCardState();
+}
+
+class _BannerCardState extends State<_BannerCard> {
+  VideoPlayerController? _controller;
+  bool _initialized = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.data.videoUrl.isNotEmpty) {
+      _initVideo();
+    }
+  }
+
+  Future<void> _initVideo() async {
+    try {
+      final ctrl = VideoPlayerController.networkUrl(
+        Uri.parse(widget.data.videoUrl),
+      );
+      await ctrl.initialize();
+      ctrl.setLooping(true);
+      ctrl.setVolume(0);
+      ctrl.play();
+      if (mounted) {
+        setState(() {
+          _controller = ctrl;
+          _initialized = true;
+        });
+      } else {
+        ctrl.dispose();
+      }
+    } catch (e) {
+      debugPrint('Video init error: $e');
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller?.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(18),
+        color: AppColors.purple.withOpacity(0.12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.10),
+            color: Colors.black.withOpacity(0.12),
             blurRadius: 16,
             offset: const Offset(0, 4),
           ),
@@ -887,68 +665,96 @@ class _BannerCard extends StatelessWidget {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            // Background image
-            Image.asset(
-              data.image,
-              fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => Container(
-                color: data.accent.withOpacity(0.15),
-              ),
-            ),
-            // Dark gradient overlay for text readability
-            Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    Colors.black.withOpacity(0.55),
-                    Colors.black.withOpacity(0.10),
-                  ],
-                  begin: Alignment.centerLeft,
-                  end: Alignment.centerRight,
+            // ── Video background ──
+            if (_initialized && _controller != null)
+              FittedBox(
+                fit: BoxFit.cover,
+                child: SizedBox(
+                  width: _controller!.value.size.width,
+                  height: _controller!.value.size.height,
+                  child: VideoPlayer(_controller!),
+                ),
+              )
+            else
+              Container(
+                color: AppColors.purple.withOpacity(0.15),
+                child: const Center(
+                  child: CircularProgressIndicator(
+                    color: Colors.white,
+                    strokeWidth: 2,
+                  ),
                 ),
               ),
-            ),
-            // Text content
+
+            // ── Text overlay ──
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 100, 0),
+              padding: const EdgeInsets.fromLTRB(18, 0, 100, 0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
+                  // heading: first half purple, second half orange
+                  Builder(builder: (context) {
+                    final words = widget.data.heading.split(' ');
+                    final mid = (words.length / 2).ceil();
+                    final firstHalf = words.take(mid).join(' ');
+                    final secondHalf = words.skip(mid).join(' ');
+                    return RichText(
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      text: TextSpan(
+                        children: [
+                          TextSpan(
+                            text: firstHalf,
+                            style: GoogleFonts.poppins(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.purple,
+                              height: 1.3,
+                            ),
+                          ),
+                          if (secondHalf.isNotEmpty)
+                            TextSpan(
+                              text: ' $secondHalf',
+                              style: GoogleFonts.poppins(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.orange,
+                                height: 1.3,
+                              ),
+                            ),
+                        ],
+                      ),
+                    );
+                  }),
+                  const SizedBox(height: 4),
                   Text(
-                    data.title,
+                    widget.data.desc,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                     style: GoogleFonts.poppins(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white,
-                      height: 1.2,
+                      fontSize: 10,
+                      color: AppColors.orange,
+                      fontWeight: FontWeight.w500,
+                      height: 1.4,
                     ),
                   ),
-                  const SizedBox(height: 3),
-                  Text(
-                    data.subtitle,
-                    style: GoogleFonts.poppins(
-                      fontSize: 12,
-                      color: Colors.white.withOpacity(0.90),
-                      fontWeight: FontWeight.w400,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 8),
                   Container(
                     padding: const EdgeInsets.symmetric(
                         horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.20),
+                      color: AppColors.orange.withOpacity(0.15),
                       borderRadius: BorderRadius.circular(6),
                       border: Border.all(
-                          color: Colors.white.withOpacity(0.50), width: 1),
+                          color: AppColors.orange.withOpacity(0.40), width: 1),
                     ),
                     child: Text(
-                      data.code,
+                      widget.data.title,
                       style: GoogleFonts.poppins(
-                        fontSize: 11,
+                        fontSize: 10,
                         fontWeight: FontWeight.w600,
-                        color: Colors.white,
+                        color: AppColors.orange.withOpacity(0.90),
                         letterSpacing: 0.2,
                       ),
                     ),
@@ -980,14 +786,6 @@ class _SectionHeader extends StatelessWidget {
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
                 color: AppColors.deepPurple)),
-        GestureDetector(
-          onTap: onViewAll,
-          child: Text('View All',
-              style: GoogleFonts.poppins(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                  color: AppColors.purple)),
-        ),
       ],
     );
   }
@@ -995,6 +793,9 @@ class _SectionHeader extends StatelessWidget {
 
 // ── Top Bar ───────────────────────────────────────────────────────────────────
 class _TopBar extends StatelessWidget {
+  final String firstName;
+  const _TopBar({required this.firstName});
+
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -1020,13 +821,12 @@ class _TopBar extends StatelessWidget {
                               fontSize: 13,
                               fontWeight: FontWeight.w600,
                               color: AppColors.deepPurple)),
-                      const Icon(Icons.keyboard_arrow_down_rounded,
-                          size: 18, color: AppColors.deepPurple),
+
                     ],
                   ),
                 ),
                 const SizedBox(height: 6),
-                Text('Good Morning,',
+                Text('Welcome,',
                     style: GoogleFonts.poppins(
                         fontSize: 13,
                         color: AppColors.greyText,
@@ -1034,7 +834,8 @@ class _TopBar extends StatelessWidget {
                 const SizedBox(height: 2),
                 Row(
                   children: [
-                    Text('Riya Sharma',
+                    Text(
+                      firstName.isNotEmpty ? firstName : 'User',
                         style: GoogleFonts.poppins(
                             fontSize: 22,
                             fontWeight: FontWeight.w700,
@@ -1053,42 +854,6 @@ class _TopBar extends StatelessWidget {
               const SizedBox(height: 4),
               Row(
                 children: [
-                  // Notification bell
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                            color: Colors.black.withOpacity(0.07),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2))
-                      ],
-                    ),
-                    child: Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        const Icon(Icons.notifications_outlined,
-                            size: 22, color: AppColors.deepPurple),
-                        // notification dot
-                        Positioned(
-                          top: 8,
-                          right: 8,
-                          child: Container(
-                            width: 8,
-                            height: 8,
-                            decoration: const BoxDecoration(
-                              color: AppColors.orange,
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 10),
                   // Avatar
                   Container(
                     width: 42,
@@ -1211,92 +976,131 @@ class _SearchBar extends StatelessWidget {
 // ── Quick Services Grid ───────────────────────────────────────────────────────
 class _QuickServicesGrid extends StatelessWidget {
   static const _services = [
-    _ServiceData('Home\nNursing',      Icons.home_outlined,                    AppColors.purple),
-    _ServiceData('Vaccination',        Icons.vaccines_outlined,                AppColors.orange),
-    _ServiceData('Patient\nCare',      Icons.personal_injury_outlined,         AppColors.purple),
-    _ServiceData('Elder\nCare',        Icons.elderly_outlined,                 AppColors.orange),
-    _ServiceData('Medical\nAssistance',Icons.medical_services_outlined,        AppColors.purple),
-    _ServiceData('Physio-\ntherapy',   Icons.accessibility_new_outlined,       AppColors.orange),
-    _ServiceData('Lab Test',           Icons.science_outlined,                 AppColors.purple),
-    _ServiceData('Emergency\nCare',    Icons.emergency_outlined,               AppColors.orange),
+    _ServiceData(
+      label: 'Vaccines & Care',
+      subtitle: 'For all age groups at home',
+      price: '₹ 299',
+      icon: Icons.vaccines_outlined,
+      color: AppColors.orange,
+    ),
   ];
 
   @override
   Widget build(BuildContext context) {
-    // Two rows of 5 — first row has 5, second row has 3
-    // Use a Wrap for natural flow
-    return Column(
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: _services
-              .take(5)
-              .map((s) => _ServiceItem(service: s))
-              .toList(),
-        ),
-        const SizedBox(height: 14),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-            ..._services.skip(5).map((s) => _ServiceItem(service: s)).toList(),
-            // Empty spacers to keep alignment with 5-column grid
-            const SizedBox(width: 60),
-            const SizedBox(width: 60),
-          ],
-        ),
-      ],
+    if (_services.isEmpty) return const SizedBox.shrink();
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: SizedBox(
+        width: (MediaQuery.of(context).size.width - 32) * 0.5,
+        child: _ServiceCard(service: _services[0]),
+      ),
     );
   }
 }
 
 class _ServiceData {
   final String label;
+  final String subtitle;
+  final String price;
   final IconData icon;
   final Color color;
-  const _ServiceData(this.label, this.icon, this.color);
+  const _ServiceData({
+    required this.label,
+    required this.subtitle,
+    required this.price,
+    required this.icon,
+    required this.color,
+  });
 }
 
-class _ServiceItem extends StatelessWidget {
+class _ServiceCard extends StatelessWidget {
   final _ServiceData service;
-  const _ServiceItem({required this.service});
+  const _ServiceCard({required this.service});
 
   @override
   Widget build(BuildContext context) {
+    final s = service;
     return GestureDetector(
       onTap: () => Navigator.push(
         context,
         MaterialPageRoute(
           builder: (_) => SubServicesScreen(
-            label: service.label.replaceAll('\n', ' '),
-            description: '',
-            icon: service.icon,
-            color: service.color,
+            label: s.label,
+            description: s.subtitle,
+            icon: s.icon,
+            color: s.color,
           ),
         ),
       ),
-      child: SizedBox(
-        width: 60,
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: s.color.withOpacity(0.10),
+              blurRadius: 14,
+              offset: const Offset(0, 4),
+            ),
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
+            // Icon box
             Container(
-              width: 54,
-              height: 54,
+              width: 48,
+              height: 48,
               decoration: BoxDecoration(
-                color: service.color.withOpacity(0.12),
-                borderRadius: BorderRadius.circular(16),
+                color: s.color.withOpacity(0.10),
+                borderRadius: BorderRadius.circular(14),
               ),
-              child: Icon(service.icon, color: service.color, size: 26),
+              child: Icon(s.icon, color: s.color, size: 26),
             ),
-            const SizedBox(height: 7),
+            const SizedBox(height: 10),
+
+            // Title
             Text(
-              service.label,
-              textAlign: TextAlign.center,
+              s.label,
               style: GoogleFonts.poppins(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w500,
-                  color: AppColors.deepPurple,
-                  height: 1.3),
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: AppColors.deepPurple,
+              ),
+            ),
+            const SizedBox(height: 2),
+
+            // Subtitle
+            Text(
+              s.subtitle,
+              style: GoogleFonts.poppins(
+                fontSize: 10,
+                color: AppColors.greyText,
+                height: 1.3,
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // Arrow button
+            Align(
+              alignment: Alignment.centerRight,
+              child: Container(
+                width: 28,
+                height: 28,
+                decoration: BoxDecoration(
+                  color: s.color.withOpacity(0.10),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(Icons.arrow_forward_rounded,
+                    color: s.color, size: 15),
+              ),
             ),
           ],
         ),
@@ -1420,130 +1224,12 @@ class _PromoBanner extends StatelessWidget {
   }
 }
 
-// ── Nurse Card ────────────────────────────────────────────────────────────────
-class _NurseCard extends StatelessWidget {
-  final String name;
-  final String rating;
-  final String reviews;
-  final String experience;
-  final String distance;
-
-  const _NurseCard({
-    required this.name,
-    required this.rating,
-    required this.reviews,
-    required this.experience,
-    required this.distance,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => NurseDetailScreen(
-            name: name,
-            role: 'Staff Nurse',
-            rating: rating,
-            reviews: reviews,
-            experience: experience,
-            distance: distance,
-          ),
-        ),
-      ),
-      child: Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 12,
-              offset: const Offset(0, 2))
-        ],
-      ),
-      child: Row(
-        children: [
-          // Avatar
-          Container(
-            width: 58,
-            height: 58,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: AppColors.purple.withOpacity(0.1),
-              border:
-                  Border.all(color: AppColors.purple.withOpacity(0.25), width: 1.5),
-            ),
-            child: ClipOval(
-              child: Image.asset(
-                'assets/images/nurse.png',
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => const Icon(Icons.person_rounded,
-                    size: 32, color: AppColors.purple),
-              ),
-            ),
-          ),
-          const SizedBox(width: 14),
-          // Info
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(name,
-                    style: GoogleFonts.poppins(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.deepPurple)),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    const Icon(Icons.star_rounded,
-                        size: 15, color: Color(0xFFFFC107)),
-                    const SizedBox(width: 3),
-                    Text('$rating ($reviews)',
-                        style: GoogleFonts.poppins(
-                            fontSize: 12,
-                            color: AppColors.greyText,
-                            fontWeight: FontWeight.w400)),
-                  ],
-                ),
-                const SizedBox(height: 3),
-                Text(experience,
-                    style: GoogleFonts.poppins(
-                        fontSize: 12,
-                        color: AppColors.greyText,
-                        fontWeight: FontWeight.w400)),
-              ],
-            ),
-          ),
-          // Distance badge
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-            decoration: BoxDecoration(
-              color: AppColors.purple.withOpacity(0.08),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Text(distance,
-                style: GoogleFonts.poppins(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.purple)),
-          ),
-        ],
-      ),
-    ),
-    );
-  }
-}
-
 // ── Bottom Navigation ─────────────────────────────────────────────────────────
 class _BottomNav extends StatelessWidget {
   final int currentIndex;
   final ValueChanged<int> onTap;
-  final VoidCallback onBookNow;
-  const _BottomNav({required this.currentIndex, required this.onTap, required this.onBookNow});
+  final VoidCallback onHomeNav;
+  const _BottomNav({required this.currentIndex, required this.onTap, required this.onHomeNav});
 
   @override
   Widget build(BuildContext context) {
@@ -1568,24 +1254,24 @@ class _BottomNav extends StatelessWidget {
           child: Stack(
             clipBehavior: Clip.none,
             children: [
-              // Nav row
+              // Nav row — 2 items left, empty space for center Home, 2 items right
               Row(
                 children: [
                   _NavItem(
-                      icon: Icons.home_rounded,
-                      label: 'Home',
+                      icon: Icons.calendar_month_rounded,
+                      label: 'Appointments',
                       selected: currentIndex == 0,
                       onTap: () => onTap(0)),
                   _NavItem(
-                      icon: Icons.calendar_month_rounded,
-                      label: 'Appointment',
+                      icon: Icons.grid_view_rounded,
+                      label: 'Services',
                       selected: currentIndex == 1,
                       onTap: () => onTap(1)),
                   // Empty space for FAB
                   const Expanded(child: SizedBox()),
                   _NavItem(
-                      icon: Icons.grid_view_rounded,
-                      label: 'Services',
+                      icon: Icons.notifications_outlined,
+                      label: 'Notifications',
                       selected: currentIndex == 3,
                       onTap: () => onTap(3)),
                   _NavItem(
@@ -1595,14 +1281,14 @@ class _BottomNav extends StatelessWidget {
                       onTap: () => onTap(4)),
                 ],
               ),
-              // Floating center FAB
+              // Floating centre Home button
               Positioned(
-                top: -28,
+                top: -36,
                 left: 0,
                 right: 0,
                 child: Center(
                   child: GestureDetector(
-                    onTap: onBookNow,
+                    onTap: onHomeNav,
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -1610,22 +1296,35 @@ class _BottomNav extends StatelessWidget {
                           width: 60,
                           height: 60,
                           decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [Color(0xFFFF9A3E), AppColors.orange],
+                            gradient: LinearGradient(
+                              colors: const [Color(0xFFFF9A3E), AppColors.orange],
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
                             ),
                             shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppColors.orange.withOpacity(
+                                    currentIndex == 2 ? 0.45 : 0.25),
+                                blurRadius: 12,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
                           ),
-                          child: const Icon(Icons.add_rounded,
-                              color: Colors.white, size: 32),
+                          child: Icon(
+                            Icons.home_rounded,
+                            color: Colors.white,
+                            size: 30,
+                          ),
                         ),
                         const SizedBox(height: 3),
-                        Text('Book Now',
+                        Text('Home',
                             style: GoogleFonts.poppins(
                                 fontSize: 10,
                                 fontWeight: FontWeight.w600,
-                                color: AppColors.orange)),
+                                color: currentIndex == 2
+                                    ? AppColors.purple
+                                    : const Color(0xFF757575))),
                       ],
                     ),
                   ),
@@ -1658,12 +1357,13 @@ class _NavItem extends StatelessWidget {
         behavior: HitTestBehavior.opaque,
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
           children: [
             // Icon with active pill indicator
             AnimatedContainer(
               duration: const Duration(milliseconds: 200),
               curve: Curves.easeInOut,
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
               decoration: BoxDecoration(
                 color: selected
                     ? AppColors.purple.withOpacity(0.12)
@@ -1679,10 +1379,59 @@ class _NavItem extends StatelessWidget {
             const SizedBox(height: 2),
             Text(
               label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: GoogleFonts.poppins(
                   fontSize: 10,
                   fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
                   color: selected ? AppColors.purple : const Color(0xFF757575)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Notifications Screen (placeholder) ───────────────────────────────────────
+class _NotificationsScreen extends StatelessWidget {
+  const _NotificationsScreen();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF5F5FA),
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        title: Text(
+          'Notifications',
+          style: GoogleFonts.poppins(
+            fontSize: 17,
+            fontWeight: FontWeight.w600,
+            color: AppColors.deepPurple,
+          ),
+        ),
+        centerTitle: true,
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1),
+          child: Container(height: 1, color: const Color(0xFFF0F0F0)),
+        ),
+      ),
+      body: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.notifications_none_rounded,
+                size: 64, color: AppColors.purple.withOpacity(0.35)),
+            const SizedBox(height: 14),
+            Text(
+              'No notifications yet',
+              style: GoogleFonts.poppins(
+                fontSize: 15,
+                fontWeight: FontWeight.w500,
+                color: AppColors.greyText,
+              ),
             ),
           ],
         ),
